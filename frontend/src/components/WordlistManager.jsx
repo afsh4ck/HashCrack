@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Upload, RefreshCw, Trash2, Eye, FolderSearch, BookOpen, CheckCircle2, Filter } from 'lucide-react'
+import { Upload, RefreshCw, Trash2, Eye, FolderSearch, BookOpen, CheckCircle2, Filter, ExternalLink, Download } from 'lucide-react'
 import useStore from '../store/useStore'
 import { t } from '../i18n'
 
@@ -142,6 +142,25 @@ export default function WordlistManager() {
         <p className="text-sm text-white/30 font-medium">{t('wl.dragHere', language)}</p>
         <p className="text-[11px] text-white/15 mt-1.5">{t('wl.supportedFormats', language)}</p>
       </div>
+
+      {/* CrackStation recommendation */}
+      <a
+        href="https://crackstation.net/crackstation-wordlist-password-cracking-dictionary.htm"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="flex items-center gap-3 p-4 rounded-2xl border border-amber-400/15 bg-amber-400/[0.03] hover:border-amber-400/30 hover:bg-amber-400/[0.06] transition-all duration-300 group"
+      >
+        <div className="w-10 h-10 rounded-xl bg-amber-400/10 border border-amber-400/15 flex items-center justify-center shrink-0 group-hover:border-amber-400/30 transition-colors">
+          <Download size={18} className="text-amber-400/60 group-hover:text-amber-400 transition-colors" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-semibold text-amber-300/90 group-hover:text-amber-300 transition-colors">
+            CrackStation Wordlist — 64M+ {t('wl.words', language)}
+          </p>
+          <p className="text-[11px] text-white/25 mt-0.5">{t('wl.crackstationDesc', language)}</p>
+        </div>
+        <ExternalLink size={14} className="text-white/15 group-hover:text-amber-400/60 transition-colors shrink-0" />
+      </a>
 
       {/* List */}
       {filteredWordlists.length === 0 ? (

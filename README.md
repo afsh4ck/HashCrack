@@ -487,11 +487,14 @@ La detección automática identifica el tipo basándose en longitud, charset y p
 
 | Nombre | Contraseñas | Descripción |
 |---|---|---|
+| [CrackStation](https://crackstation.net/crackstation-wordlist-password-cracking-dictionary.htm) | 64 M+ | Compilación masiva de contraseñas filtradas reales — **recomendada** |
 | rockyou.txt | 14.3 M | Contraseñas reales de la brecha RockYou (2009) |
 | rockyou-2021.txt | ~8.4 GB | Compilación moderna de múltiples brechas |
 | SecLists/Passwords | varios | Colección curada para pentesting |
 | fasttrack.txt | 200 K | Contraseñas cortas muy comunes |
 | xato-net-10-million | 10 M | Top 10 millones de contraseñas |
+
+> **Wordlist recomendada**: [CrackStation](https://crackstation.net/crackstation-wordlist-password-cracking-dictionary.htm) ofrece +64 millones de contraseñas reales filtradas. Descarga el archivo, descomprímelo y cárgalo desde la pestaña **Wordlists**.
 
 En Kali Linux, `rockyou.txt` suele estar comprimida:
 
