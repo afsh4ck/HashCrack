@@ -2,6 +2,8 @@
 
 Herramienta de cracking de hashes con interfaz web moderna. Funciona 100% offline, sin enviar datos a ningún servidor externo.
 
+![hashcrack-1](https://github.com/user-attachments/assets/4480e73d-ec57-4188-a7f5-2043bd432cc2)
+
 ---
 
 ## Índice
