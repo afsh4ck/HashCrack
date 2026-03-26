@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 
 const API = 'http://localhost:8000'
-const DEFAULT_WORDLIST_NAME = 'rockyou-35.txt'
+const DEFAULT_WORDLIST_NAME = 'rockyou-50.txt'
 
 const useStore = create((set, get) => ({
   // UI

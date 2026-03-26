@@ -22,7 +22,7 @@ app.include_router(crack.router, prefix="/api", tags=["crack"])
 app.include_router(wordlists.router, prefix="/api/wordlists", tags=["wordlists"])
 app.include_router(statistics.router, prefix="/api", tags=["statistics"])
 
-DEFAULT_WORDLIST = "rockyou-35.txt"
+DEFAULT_WORDLIST = "rockyou-50.txt"
 
 @app.on_event("startup")
 async def startup():
