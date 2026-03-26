@@ -111,44 +111,6 @@ COMMON_PASSWORDS = [
     "Qwerty123","Abc123!","Test1234","Temp1234","Change1",
 ]
 
-def _make_rainbow() -> dict:
-    table = {}
-    seen = set()
-    passwords = list(dict.fromkeys(COMMON_PASSWORDS))  # dedup preserving order
-    for pw in passwords:
-        pw_bytes = pw.encode("utf-8")
-        # Standard hashlib algos
-        for algo in ("md5", "sha1", "sha256", "sha512", "sha224", "sha384"):
-            h = hashlib.new(algo, pw_bytes).hexdigest()
-            table[h] = (pw, algo)
-        # SHA3
-        for algo, name in (("sha3_256", "sha3-256"), ("sha3_512", "sha3-512")):
-            try:
-                h = hashlib.new(algo, pw_bytes).hexdigest()
-                table[h] = (pw, name)
-            except Exception:
-                pass
-        # RIPEMD-160, Whirlpool
-        for algo in ("ripemd160", "whirlpool"):
-            try:
-                h = hashlib.new(algo, pw_bytes).hexdigest()
-                table[h] = (pw, algo)
-            except Exception:
-                pass
-        # NTLM / MD4 (MD4 of UTF-16LE)
-        try:
-            ntlm = hashlib.new("md4", pw.encode("utf-16-le")).hexdigest()
-            table[ntlm] = (pw, "ntlm")
-        except Exception:
-            pass
-        # mysql323
-        mh = _hash_word(pw, "mysql323")
-        if mh:
-            table[mh] = (pw, "mysql323")
-    return table
-
-RAINBOW_TABLE: dict = _make_rainbow()
-
 # ──────────────────────────────────────────────
 #  Hash verification helpers
 # ──────────────────────────────────────────────
@@ -181,6 +143,108 @@ def _hash_word(word: str, hash_type: str) -> Optional[str]:
     except Exception:
         return None
     return None
+
+# ──────────────────────────────────────────────
+#  Rainbow table: COMMON_PASSWORDS × rules × algos
+# ──────────────────────────────────────────────
+
+def _make_rainbow() -> dict:
+    table = {}
+    passwords = list(dict.fromkeys(COMMON_PASSWORDS))
+
+    # Expand with common transformations for broad rainbow coverage
+    _rainbow_rules = [
+        lambda w: w.capitalize(),
+        lambda w: w.upper(),
+        lambda w: w.lower(),
+        lambda w: w + "1",
+        lambda w: w + "2",
+        lambda w: w + "3",
+        lambda w: w + "7",
+        lambda w: w + "12",
+        lambda w: w + "21",
+        lambda w: w + "69",
+        lambda w: w + "99",
+        lambda w: w + "123",
+        lambda w: w + "1234",
+        lambda w: w + "12345",
+        lambda w: w + "666",
+        lambda w: w + "777",
+        lambda w: w + "007",
+        lambda w: w + "!",
+        lambda w: w + "@",
+        lambda w: w + "#",
+        lambda w: w + "$",
+        lambda w: w + ".",
+        lambda w: w + "?",
+        lambda w: w + "*",
+        lambda w: w + "!!",
+        lambda w: w + "1!",
+        lambda w: w + "!1",
+        lambda w: w + "2024",
+        lambda w: w + "2023",
+        lambda w: w + "2022",
+        lambda w: w + "2021",
+        lambda w: w + "2020",
+        lambda w: w + "00",
+        lambda w: w + "01",
+        lambda w: w + "10",
+        lambda w: w[0].upper() + w[1:] + "1" if len(w) > 1 else w + "1",
+        lambda w: w[0].upper() + w[1:] + "!" if len(w) > 1 else w + "!",
+        lambda w: w[0].upper() + w[1:] + "123" if len(w) > 1 else w + "123",
+        lambda w: w[0].upper() + w[1:] + "12" if len(w) > 1 else w + "12",
+        lambda w: w[0].upper() + w[1:] + "1!" if len(w) > 1 else w + "1!",
+        lambda w: w[0].upper() + w[1:] + "2024" if len(w) > 1 else w + "2024",
+        lambda w: w.replace("a", "@").replace("e", "3").replace("i", "1").replace("o", "0"),
+        lambda w: w.replace("a", "4").replace("e", "3").replace("o", "0").replace("s", "5"),
+        lambda w: w.replace("a", "@").replace("s", "$"),
+        lambda w: w.replace("o", "0").replace("l", "1"),
+        lambda w: w[::-1],
+        lambda w: w * 2 if len(w) <= 6 else w,
+    ]
+
+    all_candidates = set(passwords)
+    for pw in passwords:
+        for rule in _rainbow_rules:
+            try:
+                v = rule(pw)
+                if v:
+                    all_candidates.add(v)
+            except Exception:
+                pass
+
+    for pw in all_candidates:
+        pw_bytes = pw.encode("utf-8")
+        for algo in ("md5", "sha1", "sha256", "sha512", "sha224", "sha384"):
+            h = hashlib.new(algo, pw_bytes).hexdigest()
+            if h not in table:
+                table[h] = (pw, algo)
+        for algo, name in (("sha3_256", "sha3-256"), ("sha3_512", "sha3-512")):
+            try:
+                h = hashlib.new(algo, pw_bytes).hexdigest()
+                if h not in table:
+                    table[h] = (pw, name)
+            except Exception:
+                pass
+        for algo in ("ripemd160", "whirlpool"):
+            try:
+                h = hashlib.new(algo, pw_bytes).hexdigest()
+                if h not in table:
+                    table[h] = (pw, algo)
+            except Exception:
+                pass
+        try:
+            ntlm = hashlib.new("md4", pw.encode("utf-16-le")).hexdigest()
+            if ntlm not in table:
+                table[ntlm] = (pw, "ntlm")
+        except Exception:
+            pass
+        mh = _hash_word(pw, "mysql323")
+        if mh and mh not in table:
+            table[mh] = (pw, "mysql323")
+    return table
+
+RAINBOW_TABLE: dict = _make_rainbow()
 
 def _verify_bcrypt(word: str, hash_value: str) -> bool:
     try:
@@ -462,13 +526,16 @@ def crack_single(
             elapsed = (time.perf_counter() - start) * 1000
             return {"plaintext": result[0], "strategy": "rules", "time_ms": round(elapsed, 3), "hash_type": result[1]}
 
-    # 4. Built-in attack: COMMON_PASSWORDS + rules (always as fallback)
-    if "dictionary" in strategies or "rules" in strategies:
-        use_rules = "rules" in strategies
+    # 4. Built-in attack: COMMON_PASSWORDS + rules (fallback for rainbow/dictionary/rules)
+    if any(s in strategies for s in ("rainbow", "dictionary", "rules")):
+        use_rules = any(s in strategies for s in ("rainbow", "rules"))
         result = _builtin_attack(h, types_to_try, use_rules, stop_flag=stop_flag)
         if result:
             elapsed = (time.perf_counter() - start) * 1000
-            return {"plaintext": result[0], "strategy": result[2], "time_ms": round(elapsed, 3), "hash_type": result[1]}
+            strategy_label = result[2]
+            if "rainbow" in strategies and "dictionary" not in strategies and "rules" not in strategies:
+                strategy_label = "rainbow"
+            return {"plaintext": result[0], "strategy": strategy_label, "time_ms": round(elapsed, 3), "hash_type": result[1]}
 
     # 5. Brute-force short passwords (digits up to 8, alpha up to 4)
     if "bruteforce" in strategies:
