@@ -1,0 +1,247 @@
+const translations = {
+  es: {
+    // Header
+    'tab.cracker': 'Cracker',
+    'tab.wordlists': 'Wordlists',
+    'tab.stats': 'Estadísticas',
+    'theme.toggle': 'Cambiar tema',
+    'lang.toggle': 'Idioma',
+    'status.online': 'ONLINE',
+
+    // InputArea
+    'input.title': 'Hashes de Entrada',
+    'input.subtitle': 'Pega, arrastra o carga un archivo con hashes',
+    'input.clear': 'Limpiar',
+    'input.placeholder': 'Pega tus hashes aquí, uno por línea...\n\n5f4dcc3b5aa765d61d8327deb882cf99\na94a8fe5ccb19ba61c4c0873d391e987\n...',
+    'input.dragText': 'Arrastra un archivo o pega hashes',
+    'input.supportedTypes': 'Soporta 50+ tipos de hash',
+    'input.loadFile': 'Cargar archivo',
+    'input.paste': 'Pegar',
+
+    // CrackingOptions
+    'options.title': 'Estrategias de Cracking',
+    'options.subtitle': 'Selecciona los métodos de ataque',
+    'strategy.rainbow': 'Rainbow Tables',
+    'strategy.rainbow.desc': 'Lookup instantáneo de hashes comunes',
+    'strategy.dictionary': 'Dictionary Attack',
+    'strategy.dictionary.desc': 'Búsqueda en wordlist seleccionada',
+    'strategy.rules': 'Rules Attack',
+    'strategy.rules.desc': 'Variantes y transformaciones (l33t, caps...)',
+    'strategy.bruteforce': 'Brute Force',
+    'strategy.bruteforce.desc': 'Fuerza bruta para contraseñas cortas (dígitos, letras)',
+    'options.wordlist': 'Wordlist',
+    'options.selectWordlist': '— Seleccionar wordlist —',
+    'options.noWordlist': '— Sin wordlist (solo rainbow) —',
+    'options.loading': 'Cargando...',
+    'options.noWordlists': 'No hay wordlists. Ve a la pestaña "Wordlists".',
+
+    // ProgressPanel
+    'progress.stop': 'DETENER',
+    'progress.start': 'INICIAR CRACKING',
+    'progress.completed': 'Completado',
+    'progress.running': 'En progreso',
+    'progress.stopped': 'Detenido',
+    'progress.cracked': 'Crackeados',
+    'progress.rate': 'Tasa',
+    'progress.progress': 'Progreso',
+    'progress.lastFound': 'Últimos encontrados',
+
+    // Results
+    'results.title': 'Resultados',
+    'results.cracked': 'crackeados',
+    'results.copied': 'Copiado',
+    'results.copy': 'Copiar',
+    'results.export': 'Exportar',
+    'results.searching': 'Buscando contraseñas...',
+    'results.noResults': 'Sin resultados aún',
+    'results.hash': 'Hash',
+    'results.type': 'Tipo',
+    'results.password': 'Contraseña',
+    'results.strategy': 'Estrategia',
+    'results.time': 'Tiempo',
+
+    // WordlistManager
+    'wl.upload': 'Cargar Wordlist',
+    'wl.uploading': 'Cargando...',
+    'wl.scan': 'Escanear Sistema',
+    'wl.scanning': 'Escaneando...',
+    'wl.refresh': 'Actualizar',
+    'wl.found': 'Encontradas {n} wordlist(s)',
+    'wl.dragHere': 'Arrastra una wordlist aquí',
+    'wl.supportedFormats': 'Soporta .txt, .gz, .zip, .lst, .dict',
+    'wl.noWordlists': 'No hay wordlists registradas',
+    'wl.noWordlistsHint': 'Haz clic en "Escanear Sistema" o carga una wordlist',
+    'wl.noWordlistsInCategory': 'No hay wordlists en esta categoría',
+    'wl.tryOtherCategory': 'Prueba con otra categoría o muestra todas',
+    'wl.filterAll': 'Todas',
+    'wl.preview': 'Previsualizar',
+    'wl.delete': 'Eliminar',
+    'wl.words': 'palabras',
+    'wl.hits': 'aciertos',
+    'wl.used': 'Usado',
+    'wl.previewFirst': 'Primeras',
+    'wl.previewOf': 'de',
+    'wl.previewWords': 'palabras',
+    'wl.management': 'Gestión de Wordlists',
+
+    // HashGenerator
+    'generator.title': 'Generador de Hashes',
+    'generator.subtitle': 'Genera hashes con CyberChef (enlace externo)',
+
+    // StatsView
+    'stats.loading': 'Cargando estadísticas...',
+    'stats.totalCracked': 'Total Crackeados',
+    'stats.tasksCompleted': 'Tareas Completadas',
+    'stats.tasksTotal': 'Tareas Totales',
+    'stats.topWordlists': 'Wordlists Top',
+    'stats.hashTypeDist': 'Distribución por Tipo de Hash',
+    'stats.noData': 'Sin datos aún',
+    'stats.strategyDist': 'Distribución por Estrategia',
+    'stats.bestWordlists': 'Mejores Wordlists',
+    'stats.name': 'Nombre',
+    'stats.wordsCol': 'Palabras',
+    'stats.cracksCol': 'Cracks',
+    'stats.successRate': '% Éxito',
+    'stats.recentCracks': 'Cracks Recientes',
+    'stats.title': 'Estadísticas',
+    'stats.filterAll': 'Todos',
+    'stats.filterHashType': 'Tipo de hash',
+    'stats.filterStrategy': 'Estrategia',
+    'stats.showFull': 'Ver hash completo',
+    'stats.hideFull': 'Ocultar',
+
+    // General
+    'general.local': 'Local',
+    'general.custom': 'custom',
+    'general.system': 'sistema',
+    'general.active': 'activa',
+  },
+
+  en: {
+    // Header
+    'tab.cracker': 'Cracker',
+    'tab.wordlists': 'Wordlists',
+    'tab.stats': 'Statistics',
+    'theme.toggle': 'Toggle theme',
+    'lang.toggle': 'Language',
+    'status.online': 'ONLINE',
+
+    // InputArea
+    'input.title': 'Input Hashes',
+    'input.subtitle': 'Paste, drag or load a file with hashes',
+    'input.clear': 'Clear',
+    'input.placeholder': 'Paste your hashes here, one per line...\n\n5f4dcc3b5aa765d61d8327deb882cf99\na94a8fe5ccb19ba61c4c0873d391e987\n...',
+    'input.dragText': 'Drag a file or paste hashes',
+    'input.supportedTypes': 'Supports 50+ hash types',
+    'input.loadFile': 'Load file',
+    'input.paste': 'Paste',
+
+    // CrackingOptions
+    'options.title': 'Cracking Strategies',
+    'options.subtitle': 'Select attack methods',
+    'strategy.rainbow': 'Rainbow Tables',
+    'strategy.rainbow.desc': 'Instant lookup of common hashes',
+    'strategy.dictionary': 'Dictionary Attack',
+    'strategy.dictionary.desc': 'Search in selected wordlist',
+    'strategy.rules': 'Rules Attack',
+    'strategy.rules.desc': 'Variants and transformations (l33t, caps...)',
+    'strategy.bruteforce': 'Brute Force',
+    'strategy.bruteforce.desc': 'Brute force for short passwords (digits, letters)',
+    'options.wordlist': 'Wordlist',
+    'options.selectWordlist': '— Select wordlist —',
+    'options.noWordlist': '— No wordlist (rainbow only) —',
+    'options.loading': 'Loading...',
+    'options.noWordlists': 'No wordlists available. Go to "Wordlists" tab.',
+
+    // ProgressPanel
+    'progress.stop': 'STOP',
+    'progress.start': 'START CRACKING',
+    'progress.completed': 'Completed',
+    'progress.running': 'In progress',
+    'progress.stopped': 'Stopped',
+    'progress.cracked': 'Cracked',
+    'progress.rate': 'Rate',
+    'progress.progress': 'Progress',
+    'progress.lastFound': 'Last found',
+
+    // Results
+    'results.title': 'Results',
+    'results.cracked': 'cracked',
+    'results.copied': 'Copied',
+    'results.copy': 'Copy',
+    'results.export': 'Export',
+    'results.searching': 'Searching passwords...',
+    'results.noResults': 'No results yet',
+    'results.hash': 'Hash',
+    'results.type': 'Type',
+    'results.password': 'Password',
+    'results.strategy': 'Strategy',
+    'results.time': 'Time',
+
+    // WordlistManager
+    'wl.upload': 'Upload Wordlist',
+    'wl.uploading': 'Uploading...',
+    'wl.scan': 'Scan System',
+    'wl.scanning': 'Scanning...',
+    'wl.refresh': 'Refresh',
+    'wl.found': 'Found {n} wordlist(s)',
+    'wl.dragHere': 'Drag a wordlist here',
+    'wl.supportedFormats': 'Supports .txt, .gz, .zip, .lst, .dict',
+    'wl.noWordlists': 'No wordlists registered',
+    'wl.noWordlistsHint': 'Click "Scan System" or upload a wordlist',
+    'wl.noWordlistsInCategory': 'No wordlists in this category',
+    'wl.tryOtherCategory': 'Try another category or show all',
+    'wl.filterAll': 'All',
+    'wl.preview': 'Preview',
+    'wl.delete': 'Delete',
+    'wl.words': 'words',
+    'wl.hits': 'hits',
+    'wl.used': 'Used',
+    'wl.previewFirst': 'First',
+    'wl.previewOf': 'of',
+    'wl.previewWords': 'words',
+    'wl.management': 'Wordlist Management',
+
+    // HashGenerator
+    'generator.title': 'Hash Generator',
+    'generator.subtitle': 'Generate hashes with CyberChef (external link)',
+
+    // StatsView
+    'stats.loading': 'Loading statistics...',
+    'stats.totalCracked': 'Total Cracked',
+    'stats.tasksCompleted': 'Tasks Completed',
+    'stats.tasksTotal': 'Total Tasks',
+    'stats.topWordlists': 'Top Wordlists',
+    'stats.hashTypeDist': 'Hash Type Distribution',
+    'stats.noData': 'No data yet',
+    'stats.strategyDist': 'Strategy Distribution',
+    'stats.bestWordlists': 'Best Wordlists',
+    'stats.name': 'Name',
+    'stats.wordsCol': 'Words',
+    'stats.cracksCol': 'Cracks',
+    'stats.successRate': '% Success',
+    'stats.recentCracks': 'Recent Cracks',
+    'stats.title': 'Statistics',
+    'stats.filterAll': 'All',
+    'stats.filterHashType': 'Hash type',
+    'stats.filterStrategy': 'Strategy',
+    'stats.showFull': 'Show full hash',
+    'stats.hideFull': 'Hide',
+
+    // General
+    'general.local': 'Local',
+    'general.custom': 'custom',
+    'general.system': 'system',
+    'general.active': 'active',
+  },
+}
+
+export function t(key, lang = 'es', params = {}) {
+  let text = translations[lang]?.[key] || translations.es?.[key] || key
+  Object.entries(params).forEach(([k, v]) => {
+    text = text.replace(`{${k}}`, v)
+  })
+  return text
+}
+
+export default translations

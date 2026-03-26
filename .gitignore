@@ -1,0 +1,40 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+*.egg
+.venv/
+venv/
+env/
+
+# Node
+node_modules/
+frontend/dist/
+
+# Data (user-specific)
+data/hashcrack.db
+data/tmp/
+data/results/*.json
+data/results/*.csv
+data/results/*.txt
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Docker
+docker-entrypoint.sh
+!docker-entrypoint.sh
+
+# Logs
+*.log

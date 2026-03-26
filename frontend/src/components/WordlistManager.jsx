@@ -1,0 +1,238 @@
+import { useEffect, useRef, useState } from 'react'
+import { Upload, RefreshCw, Trash2, Eye, FolderSearch, BookOpen, CheckCircle2, Filter } from 'lucide-react'
+import useStore from '../store/useStore'
+import { t } from '../i18n'
+
+const API = 'http://localhost:8000'
+
+const CATEGORY_COLORS = {
+  SecLists: 'bg-cyan-400/10 text-cyan-300 border-cyan-400/20',
+  Metasploit: 'bg-red-400/10 text-red-300 border-red-400/20',
+  Dirb: 'bg-amber-400/10 text-amber-300 border-amber-400/20',
+  Dirbuster: 'bg-orange-400/10 text-orange-300 border-orange-400/20',
+  Wfuzz: 'bg-violet-400/10 text-violet-300 border-violet-400/20',
+  John: 'bg-emerald-400/10 text-emerald-300 border-emerald-400/20',
+  Nmap: 'bg-blue-400/10 text-blue-300 border-blue-400/20',
+  SQLMap: 'bg-pink-400/10 text-pink-300 border-pink-400/20',
+  Rockyou: 'bg-rose-400/10 text-rose-300 border-rose-400/20',
+  System: 'bg-slate-400/10 text-slate-300 border-slate-400/20',
+  Custom: 'bg-purple-400/10 text-purple-300 border-purple-400/20',
+  Other: 'bg-white/5 text-white/40 border-white/10',
+}
+
+function fmt(bytes) {
+  if (bytes >= 1e9) return `${(bytes / 1e9).toFixed(1)} GB`
+  if (bytes >= 1e6) return `${(bytes / 1e6).toFixed(1)} MB`
+  if (bytes >= 1e3) return `${(bytes / 1e3).toFixed(0)} KB`
+  return `${bytes} B`
+}
+
+function fmtWords(n) {
+  if (n >= 1e6) return `${(n / 1e6).toFixed(1)}M`
+  if (n >= 1e3) return `${(n / 1e3).toFixed(0)}K`
+  return n
+}
+
+export default function WordlistManager() {
+  const { wordlists, loadingWordlists, fetchWordlists, scanWordlists, deleteWordlist, selectedWordlistId, setSelectedWordlistId, language, wordlistCategories, selectedCategory, setSelectedCategory } = useStore()
+  const fileRef = useRef()
+  const [uploading, setUploading] = useState(false)
+  const [scanMsg, setScanMsg] = useState(null)
+  const [preview, setPreview] = useState(null)
+
+  useEffect(() => { fetchWordlists() }, [])
+
+  const filteredWordlists = selectedCategory
+    ? wordlists.filter((wl) => wl.category === selectedCategory)
+    : wordlists
+
+  const handleUpload = async (file) => {
+    if (!file) return
+    setUploading(true)
+    const fd = new FormData()
+    fd.append('file', file)
+    try {
+      const res = await fetch(`${API}/api/wordlists/upload`, { method: 'POST', body: fd })
+      const data = await res.json()
+      await fetchWordlists()
+    } catch (e) {
+      console.error(e)
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  const handleScan = async () => {
+    setScanMsg(null)
+    const data = await scanWordlists()
+    if (data) setScanMsg(t('wl.found', language, { n: data.found }))
+  }
+
+  const loadPreview = async (wl) => {
+    if (preview?.id === wl.id) { setPreview(null); return }
+    const res = await fetch(`${API}/api/wordlists/${wl.id}/preview?limit=20`)
+    const data = await res.json()
+    setPreview({ id: wl.id, words: data.words, total: data.total })
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Actions */}
+      <div className="flex flex-wrap items-center gap-3">
+        <input ref={fileRef} type="file" className="hidden" accept=".txt,.gz,.zip,.lst,.dict"
+          onChange={(e) => e.target.files[0] && handleUpload(e.target.files[0])} />
+        <button onClick={() => fileRef.current?.click()} className="btn-primary text-sm flex items-center gap-2.5" disabled={uploading}>
+          <Upload size={14} />
+          {uploading ? t('wl.uploading', language) : t('wl.upload', language)}
+        </button>
+        <button onClick={handleScan} className="btn-ghost text-sm flex items-center gap-2" disabled={loadingWordlists}>
+          <FolderSearch size={14} />
+          {loadingWordlists ? t('wl.scanning', language) : t('wl.scan', language)}
+        </button>
+        <button onClick={fetchWordlists} className="btn-ghost text-sm flex items-center gap-2">
+          <RefreshCw size={14} /> {t('wl.refresh', language)}
+        </button>
+        {scanMsg && <span className="text-xs text-emerald-400 animate-fade-in">{scanMsg}</span>}
+      </div>
+
+      {/* Category Filters */}
+      {wordlistCategories.length > 1 && (
+        <div className="flex flex-wrap items-center gap-2">
+          <Filter size={14} className="text-white/25 shrink-0" />
+          <button
+            onClick={() => setSelectedCategory(null)}
+            className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all duration-200 ${
+              !selectedCategory
+                ? 'bg-cyan-400/10 text-cyan-300 border-cyan-400/20'
+                : 'bg-white/[0.02] text-white/30 border-white/[0.06] hover:border-white/[0.12] hover:text-white/50'
+            }`}
+          >
+            {t('wl.filterAll', language)} ({wordlists.length})
+          </button>
+          {wordlistCategories.map((cat) => {
+            const count = wordlists.filter((w) => w.category === cat).length
+            const colorCls = CATEGORY_COLORS[cat] || CATEGORY_COLORS.Other
+            return (
+              <button
+                key={cat}
+                onClick={() => setSelectedCategory(selectedCategory === cat ? null : cat)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all duration-200 ${
+                  selectedCategory === cat
+                    ? colorCls
+                    : 'bg-white/[0.02] text-white/30 border-white/[0.06] hover:border-white/[0.12] hover:text-white/50'
+                }`}
+              >
+                {cat} ({count})
+              </button>
+            )
+          })}
+        </div>
+      )}
+
+      {/* Upload Drop Zone */}
+      <div
+        className="border border-dashed border-white/[0.08] rounded-2xl p-8 text-center hover:border-cyan-400/30 hover:bg-cyan-400/[0.01] transition-all duration-300 cursor-pointer group"
+        onClick={() => fileRef.current?.click()}
+        onDragOver={(e) => e.preventDefault()}
+        onDrop={(e) => { e.preventDefault(); handleUpload(e.dataTransfer.files[0]) }}
+      >
+        <div className="w-14 h-14 rounded-2xl bg-white/[0.03] border border-white/[0.06] flex items-center justify-center mx-auto mb-4 group-hover:border-cyan-400/20 transition-colors">
+          <Upload size={22} className="text-white/15 group-hover:text-cyan-400/40 transition-colors" />
+        </div>
+        <p className="text-sm text-white/30 font-medium">{t('wl.dragHere', language)}</p>
+        <p className="text-[11px] text-white/15 mt-1.5">{t('wl.supportedFormats', language)}</p>
+      </div>
+
+      {/* List */}
+      {filteredWordlists.length === 0 ? (
+        <div className="card text-center py-14">
+          <BookOpen size={32} className="mx-auto mb-3 text-white/10" />
+          <p className="text-sm text-white/20 font-medium">{selectedCategory ? t('wl.noWordlistsInCategory', language) : t('wl.noWordlists', language)}</p>
+          <p className="text-xs mt-1.5 text-white/10">{selectedCategory ? t('wl.tryOtherCategory', language) : t('wl.noWordlistsHint', language)}</p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {filteredWordlists.map((wl) => (
+            <div key={wl.id} className={`card p-4 transition-all duration-200 ${
+              selectedWordlistId === wl.id
+                ? 'border-cyan-400/20 bg-cyan-400/[0.02] shadow-[0_0_30px_rgba(0,243,255,0.04)]'
+                : 'hover:border-white/[0.1]'
+            }`}>
+              <div className="flex items-start gap-3.5">
+                <button
+                  onClick={() => setSelectedWordlistId(selectedWordlistId === wl.id ? null : wl.id)}
+                  className={`mt-1 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all duration-200 shrink-0 ${
+                    selectedWordlistId === wl.id
+                      ? 'border-cyan-400 bg-cyan-400'
+                      : 'border-white/15 hover:border-white/30'
+                  }`}
+                >
+                  {selectedWordlistId === wl.id && (
+                    <CheckCircle2 size={11} className="text-surface-900" />
+                  )}
+                </button>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2.5 flex-wrap">
+                    <span className="font-semibold text-sm text-white">{wl.name}</span>
+                    {wl.category && wl.category !== 'Other' && (
+                      <span className={`text-[10px] px-2 py-0.5 rounded-md border font-medium ${CATEGORY_COLORS[wl.category] || CATEGORY_COLORS.Other}`}>
+                        {wl.category}
+                      </span>
+                    )}
+                    {wl.is_custom ? (
+                      <span className="badge badge-purple">{t('general.custom', language)}</span>
+                    ) : (
+                      <span className="badge badge-cyan">{t('general.system', language)}</span>
+                    )}
+                    {selectedWordlistId === wl.id && (
+                      <span className="badge badge-green">{t('general.active', language)}</span>
+                    )}
+                  </div>
+                  <p className="text-[11px] text-white/20 truncate mt-1">{wl.path}</p>
+                  <div className="flex items-center gap-4 mt-2 text-[11px] text-white/30">
+                    <span className="font-mono">{fmtWords(wl.total_words)} {t('wl.words', language)}</span>
+                    <span>{fmt(wl.file_size)}</span>
+                    {wl.success_rate > 0 && (
+                      <span className="text-emerald-400 font-medium">{wl.success_rate.toFixed(1)}% {t('wl.hits', language)}</span>
+                    )}
+                    {wl.last_used && <span>{t('wl.used', language)}: {new Date(wl.last_used).toLocaleDateString()}</span>}
+                  </div>
+                </div>
+                <div className="flex items-center gap-1 shrink-0">
+                  <button
+                    onClick={() => loadPreview(wl)}
+                    className="p-2 rounded-lg text-white/20 hover:text-cyan-300 hover:bg-cyan-400/[0.06] transition-all duration-200"
+                    title={t('wl.preview', language)}
+                  >
+                    <Eye size={14} />
+                  </button>
+                  <button
+                    onClick={() => deleteWordlist(wl.id)}
+                    className="p-2 rounded-lg text-white/20 hover:text-red-400 hover:bg-red-400/[0.06] transition-all duration-200"
+                    title={t('wl.delete', language)}
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                </div>
+              </div>
+
+              {/* Preview */}
+              {preview?.id === wl.id && (
+                <div className="mt-4 bg-white/[0.02] border border-white/[0.04] rounded-xl p-4 animate-fade-in">
+                  <p className="text-[11px] text-white/25 mb-3">
+                    {t('wl.previewFirst', language)} {preview.words.length} {t('wl.previewOf', language)} {preview.total.toLocaleString()} {t('wl.previewWords', language)}
+                  </p>
+                  <div className="grid grid-cols-3 gap-1.5 max-h-36 overflow-y-auto">
+                    {preview.words.map((w, i) => (
+                      <span key={i} className="text-xs text-white/50 font-mono truncate px-2 py-1 rounded bg-white/[0.02]">{w}</span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
