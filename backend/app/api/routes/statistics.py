@@ -36,6 +36,15 @@ async def get_stats():
         "recent_cracks": [dict(r) for r in recent],
     }
 
+@router.delete("/stats")
+async def clear_stats():
+    db = get_db()
+    db.execute("DELETE FROM cracked_hashes")
+    db.execute("DELETE FROM tasks")
+    db.execute("UPDATE wordlists SET total_cracks = 0, total_attempts = 0, success_rate = 0.0, last_used = NULL")
+    db.commit()
+    return {"status": "ok"}
+
 @router.get("/tasks")
 async def list_tasks(limit: int = 20, offset: int = 0):
     db = get_db()

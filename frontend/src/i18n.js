@@ -110,6 +110,10 @@ const translations = {
     'stats.filterStrategy': 'Estrategia',
     'stats.showFull': 'Ver hash completo',
     'stats.hideFull': 'Ocultar',
+    'stats.clear': 'Limpiar estadísticas',
+    'stats.confirmClear': '¿Eliminar todos los datos?',
+    'stats.yes': 'Sí, eliminar',
+    'stats.no': 'Cancelar',
 
     // General
     'general.local': 'Local',
@@ -229,6 +233,10 @@ const translations = {
     'stats.filterStrategy': 'Strategy',
     'stats.showFull': 'Show full hash',
     'stats.hideFull': 'Hide',
+    'stats.clear': 'Clear statistics',
+    'stats.confirmClear': 'Delete all data?',
+    'stats.yes': 'Yes, delete',
+    'stats.no': 'Cancel',
 
     // General
     'general.local': 'Local',

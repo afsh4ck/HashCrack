@@ -165,6 +165,14 @@ const useStore = create((set, get) => ({
     } catch (e) {}
   },
 
+  clearStats: async () => {
+    try {
+      await fetch(`${API}/api/stats`, { method: 'DELETE' })
+      const res = await fetch(`${API}/api/stats`)
+      set({ stats: await res.json(), results: [] })
+    } catch (e) {}
+  },
+
   exportResults: async (fmt) => {
     window.open(`${API}/api/results/export/${fmt}`, '_blank')
   },

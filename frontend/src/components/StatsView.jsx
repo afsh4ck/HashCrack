@@ -1,7 +1,63 @@
-import { useEffect, useState } from 'react'
-import { TrendingUp, Hash, Zap, Award, Loader2, ChevronDown, ChevronUp, Filter } from 'lucide-react'
+import { useEffect, useState, useRef } from 'react'
+import { TrendingUp, Hash, Zap, Award, Loader2, ChevronDown, ChevronUp, Filter, Check, Trash2 } from 'lucide-react'
 import useStore from '../store/useStore'
 import { t } from '../i18n'
+
+function FilterDropdown({ value, onChange, options, placeholder, icon: Icon }) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef(null)
+
+  useEffect(() => {
+    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false) }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
+
+  const label = value === 'all' ? placeholder : options.find(o => o.value === value)?.label || value
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        onClick={() => setOpen(!open)}
+        className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-[11px] font-medium border transition-all duration-200 cursor-pointer ${
+          value !== 'all'
+            ? 'bg-cyan-400/[0.08] border-cyan-400/25 text-cyan-300'
+            : 'bg-white/[0.03] border-white/[0.08] text-white/50 hover:border-white/15 hover:text-white/70'
+        }`}
+      >
+        {Icon && <Icon size={11} />}
+        <span className="truncate max-w-[120px]">{label}</span>
+        <ChevronDown size={11} className={`transition-transform duration-200 ${open ? 'rotate-180' : ''}`} />
+      </button>
+      {open && (
+        <div className="absolute right-0 top-full mt-1.5 z-[60] dropdown-menu rounded-xl shadow-2xl shadow-black/50 min-w-[180px] animate-slide-in overflow-hidden py-1">
+          <button
+            onClick={() => { onChange('all'); setOpen(false) }}
+            className={`w-full text-left px-3.5 py-2 text-xs flex items-center justify-between transition-colors ${
+              value === 'all' ? 'text-cyan-300 bg-cyan-400/[0.06]' : 'text-white/50 hover:bg-white/[0.04] hover:text-white/80'
+            }`}
+          >
+            <span>{placeholder}</span>
+            {value === 'all' && <Check size={12} className="text-cyan-400" />}
+          </button>
+          <div className="border-t border-white/[0.06] my-1" />
+          {options.map(opt => (
+            <button
+              key={opt.value}
+              onClick={() => { onChange(opt.value); setOpen(false) }}
+              className={`w-full text-left px-3.5 py-2 text-xs flex items-center justify-between transition-colors ${
+                value === opt.value ? 'text-cyan-300 bg-cyan-400/[0.06]' : 'text-white/60 hover:bg-white/[0.04] hover:text-white/90'
+              }`}
+            >
+              <span className="font-medium uppercase">{opt.label}</span>
+              {value === opt.value && <Check size={12} className="text-cyan-400" />}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
 
 function StatCard({ label, value, icon: Icon, gradient }) {
   return (
@@ -20,8 +76,9 @@ function StatCard({ label, value, icon: Icon, gradient }) {
 }
 
 export default function StatsView() {
-  const { stats, fetchStats, language } = useStore()
+  const { stats, fetchStats, clearStats, language } = useStore()
   const [expandedHash, setExpandedHash] = useState(null)
+  const [confirmClear, setConfirmClear] = useState(false)
   const [filterType, setFilterType] = useState('all')
   const [filterStrategy, setFilterStrategy] = useState('all')
 
@@ -45,8 +102,37 @@ export default function StatsView() {
     return true
   })
 
+  const handleClear = async () => {
+    await clearStats()
+    setConfirmClear(false)
+  }
+
   return (
     <div className="space-y-8">
+      {/* Header with clear button */}
+      <div className="flex items-center justify-between">
+        <h2 className="text-sm font-semibold text-white tracking-tight">{t('stats.title', language)}</h2>
+        {stats.total_cracked > 0 && (
+          <div className="flex items-center gap-2">
+            {confirmClear ? (
+              <div className="flex items-center gap-2 animate-slide-in">
+                <span className="text-[11px] text-red-400">{t('stats.confirmClear', language)}</span>
+                <button onClick={handleClear} className="btn-danger text-[11px] px-3 py-1 rounded-lg">
+                  {t('stats.yes', language)}
+                </button>
+                <button onClick={() => setConfirmClear(false)} className="btn-ghost text-[11px] px-3 py-1 rounded-lg">
+                  {t('stats.no', language)}
+                </button>
+              </div>
+            ) : (
+              <button onClick={() => setConfirmClear(true)} className="btn-ghost text-[11px] flex items-center gap-1.5 px-3 py-1.5 rounded-lg">
+                <Trash2 size={12} /> {t('stats.clear', language)}
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+
       {/* Metric Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <StatCard label={t('stats.totalCracked', language)} value={stats.total_cracked.toLocaleString()} icon={Hash}
