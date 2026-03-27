@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react'
-import { TrendingUp, Hash, Zap, Award, Loader2, ChevronDown, ChevronUp, Filter, Check, Trash2 } from 'lucide-react'
+import { TrendingUp, Hash, Zap, Award, Loader2, ChevronDown, ChevronUp, Check, Trash2 } from 'lucide-react'
 import useStore from '../store/useStore'
 import { t } from '../i18n'
 
@@ -243,27 +243,20 @@ export default function StatsView() {
           <div className="flex items-center justify-between flex-wrap gap-3">
             <h3 className="text-sm font-semibold text-white tracking-tight">{t('stats.recentCracks', language)}</h3>
             <div className="flex items-center gap-2">
-              <Filter size={12} className="text-white/20" />
-              <select
+              <FilterDropdown
                 value={filterType}
-                onChange={(e) => setFilterType(e.target.value)}
-                className="dropdown-select rounded-lg px-2.5 py-1.5 text-[11px] focus:outline-none focus:border-cyan-400/40 transition-all duration-200 appearance-none cursor-pointer"
-              >
-                <option value="all">{t('stats.filterAll', language)} — {t('stats.filterHashType', language)}</option>
-                {hashTypes.map(ht => (
-                  <option key={ht} value={ht}>{ht}</option>
-                ))}
-              </select>
-              <select
+                onChange={setFilterType}
+                options={hashTypes.map(ht => ({ value: ht, label: ht }))}
+                placeholder={t('stats.filterHashType', language)}
+                icon={Hash}
+              />
+              <FilterDropdown
                 value={filterStrategy}
-                onChange={(e) => setFilterStrategy(e.target.value)}
-                className="dropdown-select rounded-lg px-2.5 py-1.5 text-[11px] focus:outline-none focus:border-cyan-400/40 transition-all duration-200 appearance-none cursor-pointer"
-              >
-                <option value="all">{t('stats.filterAll', language)} — {t('stats.filterStrategy', language)}</option>
-                {strategyTypes.map(s => (
-                  <option key={s} value={s}>{s}</option>
-                ))}
-              </select>
+                onChange={setFilterStrategy}
+                options={strategyTypes.map(s => ({ value: s, label: s }))}
+                placeholder={t('stats.filterStrategy', language)}
+                icon={Zap}
+              />
             </div>
           </div>
 
