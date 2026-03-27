@@ -243,6 +243,8 @@ La aplicación tiene tres secciones principales accesibles desde la barra de nav
 
 ### Pestaña Cracker
 
+<img width="2772" height="1772" alt="image" src="https://github.com/user-attachments/assets/7a6825f8-d681-46b0-9bf5-494b190ff515" />
+
 Flujo de trabajo principal:
 
 1. **Entrada de hashes** — pega hashes directamente en el área de texto, cárgalos desde un archivo `.txt` o arrástralos con drag & drop. La detección automática se ejecuta en tiempo real y muestra **variantes** cuando la confianza es baja (p.ej. `md5 / ntlm / md4 / lm 50%`).
@@ -287,6 +289,8 @@ Flujo de trabajo principal:
 ```
 
 ### Pestaña Wordlists
+
+<img width="2674" height="1386" alt="image" src="https://github.com/user-attachments/assets/82957a2b-0cad-4ebd-9124-41b2d1059e0c" />
 
 Gestión completa de wordlists:
 
@@ -335,6 +339,7 @@ En sistemas con muchas wordlists (como Kali Linux), las wordlists se clasifican 
 Los filtros aparecen como botones con colores diferenciados y conteo de wordlists por categoría. Solo se muestran las categorías que existen en el sistema.
 
 ### Pestaña Estadísticas
+
 
 - Total de hashes crackeados, tareas completadas, top wordlists
 - Distribución por tipo de hash (barras de progreso)
