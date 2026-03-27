@@ -161,7 +161,7 @@ export default function StatsView() {
               <select
                 value={filterType}
                 onChange={(e) => setFilterType(e.target.value)}
-                className="bg-white/[0.03] border border-white/[0.08] rounded-lg px-2.5 py-1.5 text-[11px] text-white/60 focus:outline-none focus:border-cyan-400/40 transition-all duration-200 appearance-none cursor-pointer"
+                className="dropdown-select rounded-lg px-2.5 py-1.5 text-[11px] focus:outline-none focus:border-cyan-400/40 transition-all duration-200 appearance-none cursor-pointer"
               >
                 <option value="all">{t('stats.filterAll', language)} — {t('stats.filterHashType', language)}</option>
                 {hashTypes.map(ht => (
@@ -171,7 +171,7 @@ export default function StatsView() {
               <select
                 value={filterStrategy}
                 onChange={(e) => setFilterStrategy(e.target.value)}
-                className="bg-white/[0.03] border border-white/[0.08] rounded-lg px-2.5 py-1.5 text-[11px] text-white/60 focus:outline-none focus:border-cyan-400/40 transition-all duration-200 appearance-none cursor-pointer"
+                className="dropdown-select rounded-lg px-2.5 py-1.5 text-[11px] focus:outline-none focus:border-cyan-400/40 transition-all duration-200 appearance-none cursor-pointer"
               >
                 <option value="all">{t('stats.filterAll', language)} — {t('stats.filterStrategy', language)}</option>
                 {strategyTypes.map(s => (

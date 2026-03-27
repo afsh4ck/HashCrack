@@ -211,12 +211,43 @@
 }
 [data-theme="light"] textarea { color: rgba(0,0,0,0.75) !important; }
 [data-theme="light"] textarea::placeholder { color: rgba(0,0,0,0.2) !important; }
-[data-theme="light"] select {
-  background-color: rgba(0,0,0,0.02) !important;
-  border-color: rgba(0,0,0,0.10) !important;
+/* --- Dropdown menus (custom) --- */
+.dropdown-menu {
+  background: #1a1a2e;
+  border: 1px solid rgba(255,255,255,0.1);
+}
+[data-theme="light"] .dropdown-menu {
+  background: #ffffff !important;
+  border-color: rgba(0,0,0,0.12) !important;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.12), 0 0 0 1px rgba(0,0,0,0.05) !important;
+}
+
+/* --- Select dropdowns --- */
+.dropdown-select {
+  background: #1a1a2e;
+  border: 1px solid rgba(255,255,255,0.1);
+  color: rgba(255,255,255,0.6);
+}
+.dropdown-select option {
+  background: #1a1a2e;
+  color: rgba(255,255,255,0.8);
+}
+[data-theme="light"] .dropdown-select {
+  background: #ffffff !important;
+  border-color: rgba(0,0,0,0.12) !important;
   color: rgba(0,0,0,0.6) !important;
 }
-[data-theme="light"] select option { background: #fff; color: #1a1a2e; }
+[data-theme="light"] .dropdown-select option {
+  background: #ffffff !important;
+  color: #1a1a2e !important;
+}
+
+[data-theme="light"] select {
+  background-color: #ffffff !important;
+  border-color: rgba(0,0,0,0.12) !important;
+  color: rgba(0,0,0,0.6) !important;
+}
+[data-theme="light"] select option { background: #ffffff; color: #1a1a2e; }
 
 /* --- Badges --- */
 [data-theme="light"] .badge-cyan   { background: rgba(0,180,200,0.08); color: #0891b2; border-color: rgba(0,180,200,0.20); }

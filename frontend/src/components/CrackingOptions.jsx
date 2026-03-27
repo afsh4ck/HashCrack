@@ -107,7 +107,7 @@ export default function CrackingOptions() {
             </button>
 
             {showWlDropdown && (
-              <div className="absolute top-full left-0 right-0 mt-1.5 z-50 bg-surface-700 border border-white/[0.08] rounded-xl shadow-2xl shadow-black/50 max-h-64 overflow-y-auto animate-slide-in">
+              <div className="absolute top-full left-0 right-0 mt-1.5 z-[60] dropdown-menu rounded-xl shadow-2xl shadow-black/50 max-h-64 overflow-y-auto animate-slide-in">
                 <button
                   onClick={() => { setSelectedWordlistId(null); setShowWlDropdown(false) }}
                   className={`w-full text-left px-4 py-3 text-sm hover:bg-white/[0.04] transition-colors border-b border-white/[0.04] ${

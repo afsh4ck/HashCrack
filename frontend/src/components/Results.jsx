@@ -45,7 +45,7 @@ export default function Results() {
               <button className="btn-ghost text-xs flex items-center gap-2">
                 <Download size={12} /> {t('results.export', language)}
               </button>
-              <div className="absolute right-0 top-full mt-1.5 z-50 bg-surface-700 border border-white/[0.08] rounded-xl shadow-2xl shadow-black/50 hidden group-hover:block min-w-[130px] animate-slide-in overflow-hidden">
+              <div className="absolute right-0 top-full mt-1.5 z-[60] dropdown-menu rounded-xl shadow-2xl shadow-black/50 hidden group-hover:block min-w-[130px] animate-slide-in overflow-hidden">
                 {['json', 'csv', 'txt', 'potfile'].map((fmt) => (
                   <button
                     key={fmt}
