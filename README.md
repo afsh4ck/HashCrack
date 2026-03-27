@@ -243,7 +243,7 @@ La aplicación tiene tres secciones principales accesibles desde la barra de nav
 
 ### Pestaña Cracker
 
-<img width="2772" height="1772" alt="image" src="https://github.com/user-attachments/assets/7a6825f8-d681-46b0-9bf5-494b190ff515" />
+<img width="2904" height="1756" alt="image" src="https://github.com/user-attachments/assets/cfcaece8-b8cd-46fa-85a9-4d72e0ba5c44" />
 
 Flujo de trabajo principal:
 
