@@ -340,6 +340,7 @@ Los filtros aparecen como botones con colores diferenciados y conteo de wordlist
 
 ### Pestaña Estadísticas
 
+<img width="2878" height="1926" alt="image" src="https://github.com/user-attachments/assets/ccb5f967-13bb-498c-bfce-efe3694ca12c" />
 
 - Total de hashes crackeados, tareas completadas, top wordlists
 - Distribución por tipo de hash (barras de progreso)
