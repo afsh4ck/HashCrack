@@ -53,16 +53,23 @@ async def _run_task(task_id: str, hashes: List[str], strategies: list,
         if stop_flag[0]:
             break
 
-        detection = detect_hash(h)
-        hash_type = detection.detected_type or "md5"
-        variants = detection.variants if detection.variants else [hash_type]
+        try:
+            detection = detect_hash(h)
+            hash_type = detection.detected_type or "md5"
+            variants = detection.variants if detection.variants else [hash_type]
+        except Exception:
+            hash_type = "md5"
+            variants = ["md5"]
 
         # Run CPU-bound cracking in executor
-        crack_result = await loop.run_in_executor(
-            None,
-            crack_single,
-            h, hash_type, strategies, wordlist_path, stop_flag, variants,
-        )
+        try:
+            crack_result = await loop.run_in_executor(
+                None,
+                crack_single,
+                h, hash_type, strategies, wordlist_path, stop_flag, variants,
+            )
+        except Exception:
+            crack_result = {}
 
         processed += 1
         if crack_result:

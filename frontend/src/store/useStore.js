@@ -121,7 +121,7 @@ const useStore = create((set, get) => ({
   startCracking: async () => {
     const { hashInput, strategies, selectedWordlistId } = get()
     const hashes = hashInput.split('\n').map((h) => h.trim()).filter(Boolean)
-    if (!hashes.length) return
+    if (!hashes.length || !strategies.length) return
 
     try {
       const res = await fetch(`${API}/api/crack`, {
@@ -133,7 +133,12 @@ const useStore = create((set, get) => ({
           wordlist_id: selectedWordlistId || null,
         }),
       })
+      if (!res.ok) {
+        console.error('startCracking: API error', res.status, await res.text())
+        return
+      }
       const data = await res.json()
+      if (!data.task_id) return
       set({ taskId: data.task_id, results: [], taskStatus: { status: 'queued', processed: 0, cracked: 0, total: hashes.length, results: [] } })
 
       // Open WebSocket

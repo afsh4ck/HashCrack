@@ -22,6 +22,16 @@ class GenerateResponse(BaseModel):
     algorithm: str
 
 
+class BatchRequest(BaseModel):
+    texts: list[str]
+    algorithm: str
+
+
+class BatchResponse(BaseModel):
+    hashes: list[str]
+    algorithm: str
+
+
 def _compute_hash(text: str, algorithm: str) -> Optional[str]:
     word_bytes = text.encode("utf-8", errors="ignore")
     try:
@@ -63,3 +73,15 @@ async def generate_hash(req: GenerateRequest):
     if result is None:
         return GenerateResponse(hash="Error computing hash", algorithm=algo)
     return GenerateResponse(hash=result, algorithm=algo)
+
+
+@router.post("/batch", response_model=BatchResponse)
+async def batch_generate(req: BatchRequest):
+    algo = req.algorithm.lower().strip()
+    if algo not in SUPPORTED_ALGORITHMS:
+        return BatchResponse(hashes=[], algorithm=algo)
+    hashes = []
+    for text in req.texts:
+        h = _compute_hash(text, algo) if text else ""
+        hashes.append(h or "")
+    return BatchResponse(hashes=hashes, algorithm=algo)

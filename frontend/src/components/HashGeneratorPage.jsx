@@ -1,29 +1,25 @@
-import { useState, useEffect, useCallback } from 'react'
-import { FlaskConical, Plus, Trash2, Copy, CheckCircle2, Download, ChevronDown, RotateCcw } from 'lucide-react'
+import { useState, useEffect, useRef, useCallback } from 'react'
+import { FlaskConical, Copy, CheckCircle2, Download, ChevronDown, RotateCcw } from 'lucide-react'
 import useStore from '../store/useStore'
 import { t } from '../i18n'
 
 const API = 'http://localhost:8000'
 
-const ALGORITHMS = [
-  { id: 'md5',      name: 'MD5',       color: 'cyan',    group: 'MD' },
-  { id: 'md4',      name: 'MD4',       color: 'cyan',    group: 'MD' },
-  { id: 'sha1',     name: 'SHA1',      color: 'emerald', group: 'SHA' },
-  { id: 'sha224',   name: 'SHA-224',   color: 'emerald', group: 'SHA' },
-  { id: 'sha256',   name: 'SHA-256',   color: 'emerald', group: 'SHA' },
-  { id: 'sha384',   name: 'SHA-384',   color: 'emerald', group: 'SHA' },
-  { id: 'sha512',   name: 'SHA-512',   color: 'emerald', group: 'SHA' },
-  { id: 'sha3-256', name: 'SHA3-256',  color: 'violet',  group: 'SHA3' },
-  { id: 'sha3-512', name: 'SHA3-512',  color: 'violet',  group: 'SHA3' },
-  { id: 'ntlm',     name: 'NTLM',      color: 'amber',   group: 'Windows' },
-  { id: 'md4',      name: 'MD4 (raw)', color: 'amber',   group: 'Windows' },
-  { id: 'ripemd160', name: 'RIPEMD-160', color: 'cyan',  group: 'Otros' },
-  { id: 'whirlpool', name: 'Whirlpool', color: 'cyan',   group: 'Otros' },
-  { id: 'mysql323', name: 'MySQL 3.23', color: 'amber',  group: 'Otros' },
+const UNIQUE_ALGORITHMS = [
+  { id: 'md5',       name: 'MD5',        color: 'cyan' },
+  { id: 'md4',       name: 'MD4',        color: 'cyan' },
+  { id: 'sha1',      name: 'SHA1',       color: 'emerald' },
+  { id: 'sha224',    name: 'SHA-224',    color: 'emerald' },
+  { id: 'sha256',    name: 'SHA-256',    color: 'emerald' },
+  { id: 'sha384',    name: 'SHA-384',    color: 'emerald' },
+  { id: 'sha512',    name: 'SHA-512',    color: 'emerald' },
+  { id: 'sha3-256',  name: 'SHA3-256',   color: 'violet' },
+  { id: 'sha3-512',  name: 'SHA3-512',   color: 'violet' },
+  { id: 'ntlm',      name: 'NTLM',       color: 'amber' },
+  { id: 'ripemd160',  name: 'RIPEMD-160', color: 'cyan' },
+  { id: 'whirlpool',  name: 'Whirlpool',  color: 'cyan' },
+  { id: 'mysql323',   name: 'MySQL 3.23', color: 'amber' },
 ]
-
-// Deduplicate by id (md4 appears twice with different names)
-const UNIQUE_ALGORITHMS = ALGORITHMS.filter((a, i, arr) => arr.findIndex(b => b.id === a.id) === i)
 
 const COLOR_MAP = {
   cyan:    { pill: 'bg-cyan-400/10 border-cyan-400/25 text-cyan-300', active: 'bg-cyan-400/20 border-cyan-400/40 text-cyan-200 shadow-cyan-400/10 shadow-lg' },
@@ -32,81 +28,74 @@ const COLOR_MAP = {
   amber:   { pill: 'bg-amber-400/10 border-amber-400/25 text-amber-300', active: 'bg-amber-400/20 border-amber-400/40 text-amber-200 shadow-amber-400/10 shadow-lg' },
 }
 
-let rowIdCounter = 1
-
-function createRow() {
-  return { id: rowIdCounter++, algorithm: 'md5', plaintext: '', hash: '', copied: false }
-}
-
 export default function HashGeneratorPage() {
   const { language } = useStore()
-  const [rows, setRows] = useState([createRow()])
-  const [selectedAlgo, setSelectedAlgo] = useState(null) // for batch algo selector
+  const [algorithm, setAlgorithm] = useState('md5')
+  const [plaintext, setPlaintext] = useState('')
+  const [hashes, setHashes] = useState('')
+  const [copied, setCopied] = useState(false)
+  const debounceRef = useRef(null)
 
-  const generateHash = useCallback(async (text, algorithm) => {
-    if (!text) return ''
+  const generateBatch = useCallback(async (text, algo) => {
+    const lines = text.split('\n')
+    if (!lines.some(l => l.length > 0)) {
+      setHashes('')
+      return
+    }
     try {
-      const res = await fetch(`${API}/api/generator/generate`, {
+      const res = await fetch(`${API}/api/generator/batch`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text, algorithm }),
+        body: JSON.stringify({ texts: lines, algorithm: algo }),
       })
       const data = await res.json()
-      return data.hash || ''
+      setHashes((data.hashes || []).join('\n'))
     } catch {
-      return ''
+      setHashes('')
     }
   }, [])
 
-  const updateRow = useCallback(async (id, field, value) => {
-    setRows(prev => prev.map(r => r.id === id ? { ...r, [field]: value } : r))
-    if (field === 'plaintext' || field === 'algorithm') {
-      const row = rows.find(r => r.id === id) || {}
-      const text = field === 'plaintext' ? value : row.plaintext
-      const algo = field === 'algorithm' ? value : row.algorithm
-      if (text) {
-        const hash = await generateHash(text, algo)
-        setRows(prev => prev.map(r => r.id === id ? { ...r, hash, [field]: value } : r))
-      } else {
-        setRows(prev => prev.map(r => r.id === id ? { ...r, hash: '', [field]: value } : r))
-      }
-    }
-  }, [rows, generateHash])
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+    debounceRef.current = setTimeout(() => {
+      generateBatch(plaintext, algorithm)
+    }, 150)
+    return () => clearTimeout(debounceRef.current)
+  }, [plaintext, algorithm, generateBatch])
 
-  const addRow = () => setRows(prev => [...prev, createRow()])
-
-  const removeRow = (id) => {
-    setRows(prev => prev.length > 1 ? prev.filter(r => r.id !== id) : prev)
+  const handleAlgoChange = (algo) => {
+    setAlgorithm(algo)
   }
 
-  const copyHash = (id) => {
-    const row = rows.find(r => r.id === id)
-    if (row?.hash) {
-      navigator.clipboard.writeText(row.hash)
-      setRows(prev => prev.map(r => r.id === id ? { ...r, copied: true } : r))
-      setTimeout(() => setRows(prev => prev.map(r => r.id === id ? { ...r, copied: false } : r)), 1500)
+  const copyOutput = () => {
+    if (hashes) {
+      navigator.clipboard.writeText(hashes)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 1500)
     }
   }
 
-  const copyAll = () => {
-    const text = rows.filter(r => r.hash).map(r => `${r.hash}`).join('\n')
-    if (text) navigator.clipboard.writeText(text)
+  const clearAll = () => {
+    setPlaintext('')
+    setHashes('')
   }
 
-  const exportAll = (format) => {
-    const data = rows.filter(r => r.hash)
-    if (!data.length) return
+  const exportOutput = (format) => {
+    const lines = plaintext.split('\n')
+    const hashLines = hashes.split('\n')
+    const pairs = lines.map((l, i) => ({ plaintext: l, hash: hashLines[i] || '' })).filter(p => p.plaintext || p.hash)
+    if (!pairs.length) return
     let content, filename, type
     if (format === 'json') {
-      content = JSON.stringify(data.map(r => ({ plaintext: r.plaintext, algorithm: r.algorithm, hash: r.hash })), null, 2)
+      content = JSON.stringify(pairs.map(p => ({ ...p, algorithm })), null, 2)
       filename = 'hashes.json'
       type = 'application/json'
     } else if (format === 'csv') {
-      content = 'plaintext,algorithm,hash\n' + data.map(r => `"${r.plaintext}","${r.algorithm}","${r.hash}"`).join('\n')
+      content = 'plaintext,algorithm,hash\n' + pairs.map(p => `"${p.plaintext}","${algorithm}","${p.hash}"`).join('\n')
       filename = 'hashes.csv'
       type = 'text/csv'
     } else {
-      content = data.map(r => `${r.plaintext}:${r.hash}`).join('\n')
+      content = pairs.map(p => `${p.plaintext}:${p.hash}`).join('\n')
       filename = 'hashes.txt'
       type = 'text/plain'
     }
@@ -119,29 +108,7 @@ export default function HashGeneratorPage() {
     URL.revokeObjectURL(url)
   }
 
-  const applyAlgoToAll = async (algo) => {
-    setSelectedAlgo(algo)
-    const updated = rows.map(r => ({ ...r, algorithm: algo }))
-    setRows(updated)
-    const results = await Promise.all(
-      updated.map(async (r) => {
-        if (r.plaintext) {
-          const hash = await generateHash(r.plaintext, algo)
-          return { ...r, hash }
-        }
-        return r
-      })
-    )
-    setRows(results)
-  }
-
-  const clearAll = () => {
-    rowIdCounter = 1
-    setRows([createRow()])
-    setSelectedAlgo(null)
-  }
-
-  const hasResults = rows.some(r => r.hash)
+  const lineCount = plaintext ? plaintext.split('\n').length : 0
 
   return (
     <div className="max-w-5xl mx-auto space-y-6 animate-fade-in">
@@ -152,12 +119,13 @@ export default function HashGeneratorPage() {
           <span className="badge badge-cyan">{t('general.local', language)}</span>
         </div>
         <div className="flex items-center gap-2">
-          {hasResults && (
+          {hashes && (
             <>
-              <button onClick={copyAll} className="btn-ghost text-xs flex items-center gap-1.5">
-                <Copy size={12} /> {t('gen.copyAll', language)}
+              <button onClick={copyOutput} className="btn-ghost text-xs flex items-center gap-1.5">
+                {copied ? <CheckCircle2 size={12} className="text-emerald-400" /> : <Copy size={12} />}
+                {copied ? t('results.copied', language) : t('gen.copyAll', language)}
               </button>
-              <ExportDropdown language={language} onExport={exportAll} />
+              <ExportDropdown language={language} onExport={exportOutput} />
             </>
           )}
           <button onClick={clearAll} className="btn-ghost text-xs flex items-center gap-1.5">
@@ -166,7 +134,7 @@ export default function HashGeneratorPage() {
         </div>
       </div>
 
-      {/* Quick algorithm selector */}
+      {/* Algorithm selector */}
       <div className="card">
         <div className="flex items-center gap-3 mb-4">
           <div className="p-2 rounded-lg bg-violet-400/[0.08]">
@@ -179,12 +147,12 @@ export default function HashGeneratorPage() {
         </div>
         <div className="flex flex-wrap gap-2">
           {UNIQUE_ALGORITHMS.map(({ id, name, color }) => {
-            const isActive = selectedAlgo === id
+            const isActive = algorithm === id
             const cls = isActive ? COLOR_MAP[color].active : COLOR_MAP[color].pill
             return (
               <button
                 key={id}
-                onClick={() => applyAlgoToAll(id)}
+                onClick={() => handleAlgoChange(id)}
                 className={`px-3 py-1.5 rounded-lg border text-[11px] font-semibold tracking-wide transition-all duration-200 cursor-pointer ${cls}`}
               >
                 {name}
@@ -194,118 +162,69 @@ export default function HashGeneratorPage() {
         </div>
       </div>
 
-      {/* Hash rows */}
-      <div className="space-y-3">
-        {rows.map((row, idx) => (
-          <HashRow
-            key={row.id}
-            row={row}
-            index={idx}
-            language={language}
-            onUpdate={updateRow}
-            onRemove={removeRow}
-            onCopy={copyHash}
-            canRemove={rows.length > 1}
-          />
-        ))}
-      </div>
-
-      {/* Add row button */}
-      <button
-        onClick={addRow}
-        className="w-full py-3 rounded-xl border border-dashed border-white/10 text-white/30 text-xs font-medium hover:border-cyan-400/30 hover:text-cyan-400/60 hover:bg-cyan-400/[0.02] transition-all duration-200 flex items-center justify-center gap-2"
-      >
-        <Plus size={14} /> {t('gen.addRow', language)}
-      </button>
-    </div>
-  )
-}
-
-function HashRow({ row, index, language, onUpdate, onRemove, onCopy, canRemove }) {
-  const algo = UNIQUE_ALGORITHMS.find(a => a.id === row.algorithm) || UNIQUE_ALGORITHMS[0]
-  const color = COLOR_MAP[algo.color]
-
-  return (
-    <div className="card !p-4 space-y-3">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <span className="text-[10px] font-bold text-white/20 w-5 text-center">#{index + 1}</span>
-          <span className={`px-2 py-0.5 rounded-md border text-[10px] font-semibold ${color.pill}`}>
-            {algo.name}
-          </span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <button
-            onClick={() => onCopy(row.id)}
-            disabled={!row.hash}
-            className="p-1.5 rounded-lg text-white/30 hover:text-cyan-300 hover:bg-white/[0.04] transition-colors disabled:opacity-20 disabled:cursor-not-allowed"
-            title={t('gen.copy', language)}
-          >
-            {row.copied ? <CheckCircle2 size={13} className="text-emerald-400" /> : <Copy size={13} />}
-          </button>
-          {canRemove && (
-            <button
-              onClick={() => onRemove(row.id)}
-              className="p-1.5 rounded-lg text-white/20 hover:text-red-400 hover:bg-red-400/[0.06] transition-colors"
-              title={t('gen.remove', language)}
-            >
-              <Trash2 size={13} />
-            </button>
-          )}
-        </div>
-      </div>
-
-      <div className="grid sm:grid-cols-[200px_1fr] gap-3">
-        {/* Algorithm selector */}
-        <div className="relative">
-          <select
-            value={row.algorithm}
-            onChange={(e) => onUpdate(row.id, 'algorithm', e.target.value)}
-            className="w-full dropdown-select rounded-xl px-3 py-2.5 text-xs font-medium appearance-none cursor-pointer pr-8"
-          >
-            {UNIQUE_ALGORITHMS.map(a => (
-              <option key={a.id} value={a.id}>{a.name}</option>
-            ))}
-          </select>
-          <ChevronDown size={12} className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 pointer-events-none" />
-        </div>
-
-        {/* Plaintext input */}
-        <input
-          type="text"
-          value={row.plaintext}
-          onChange={(e) => onUpdate(row.id, 'plaintext', e.target.value)}
-          placeholder={t('gen.placeholder', language)}
-          className="input-field !py-2.5 text-xs"
-        />
-      </div>
-
-      {/* Output hash */}
-      {row.hash && (
-        <div className="relative group">
-          <div className="w-full bg-white/[0.02] border border-white/[0.06] rounded-xl px-4 py-2.5 text-xs font-mono text-emerald-300/80 break-all select-all">
-            {row.hash}
+      {/* Textareas */}
+      <div className="card !p-0 overflow-hidden">
+        {/* Input textarea */}
+        <div className="border-b border-white/[0.06]">
+          <div className="flex items-center justify-between px-4 py-2.5 bg-white/[0.02]">
+            <span className="text-[11px] font-semibold text-white/40 uppercase tracking-wider">{t('gen.input', language)}</span>
+            {lineCount > 0 && (
+              <span className="text-[10px] text-white/20">{lineCount} {lineCount === 1 ? 'línea' : 'líneas'}</span>
+            )}
           </div>
+          <textarea
+            value={plaintext}
+            onChange={(e) => setPlaintext(e.target.value)}
+            placeholder={t('gen.inputPlaceholder', language)}
+            className="w-full bg-transparent text-sm text-white/80 placeholder-white/20 px-4 py-3 resize-y min-h-[140px] focus:outline-none font-mono"
+            spellCheck={false}
+          />
         </div>
-      )}
+
+        {/* Output textarea */}
+        <div>
+          <div className="flex items-center justify-between px-4 py-2.5 bg-white/[0.02]">
+            <div className="flex items-center gap-2">
+              <span className="text-[11px] font-semibold text-white/40 uppercase tracking-wider">{t('gen.output', language)}</span>
+              <span className={`px-2 py-0.5 rounded-md border text-[9px] font-bold ${COLOR_MAP[UNIQUE_ALGORITHMS.find(a => a.id === algorithm)?.color || 'cyan'].pill}`}>
+                {UNIQUE_ALGORITHMS.find(a => a.id === algorithm)?.name || algorithm.toUpperCase()}
+              </span>
+            </div>
+            <button
+              onClick={copyOutput}
+              disabled={!hashes}
+              className="p-1 rounded-md text-white/20 hover:text-cyan-300 transition-colors disabled:opacity-20 disabled:cursor-not-allowed"
+              title={t('gen.copy', language)}
+            >
+              {copied ? <CheckCircle2 size={13} className="text-emerald-400" /> : <Copy size={13} />}
+            </button>
+          </div>
+          <textarea
+            value={hashes}
+            readOnly
+            placeholder={t('gen.outputPlaceholder', language)}
+            className="w-full bg-transparent text-sm text-emerald-300/80 placeholder-white/10 px-4 py-3 resize-y min-h-[140px] focus:outline-none font-mono select-all"
+          />
+        </div>
+      </div>
     </div>
   )
 }
 
 function ExportDropdown({ language, onExport }) {
   const [open, setOpen] = useState(false)
-  const ref = useState(null)
+  const ref = useRef(null)
 
   useEffect(() => {
     const handler = (e) => {
-      if (ref[0] && !ref[0].contains(e.target)) setOpen(false)
+      if (ref.current && !ref.current.contains(e.target)) setOpen(false)
     }
     document.addEventListener('mousedown', handler)
     return () => document.removeEventListener('mousedown', handler)
-  }, [ref])
+  }, [])
 
   return (
-    <div ref={(el) => (ref[0] = el)} className="relative">
+    <div ref={ref} className="relative">
       <button
         onClick={() => setOpen(!open)}
         className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-all cursor-pointer ${

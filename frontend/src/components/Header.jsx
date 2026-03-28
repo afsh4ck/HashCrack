@@ -17,7 +17,7 @@ export default function Header() {
       <div className="header-glow" />
       <div className="relative max-w-7xl mx-auto px-6 h-16 flex items-center gap-6">
         {/* Logo */}
-        <div className="flex items-center gap-2.5 mr-2">
+        <div className="flex items-center gap-2.5 mr-2 cursor-pointer" onClick={() => setActiveTab('cracker')}>
           <div className="relative">
             <div className="absolute inset-0 bg-cyan-400/20 rounded-lg blur-md" />
             <div className="relative bg-gradient-to-br from-cyan-400 to-cyan-600 p-1.5 rounded-lg">

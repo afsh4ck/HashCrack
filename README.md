@@ -17,7 +17,7 @@ Herramienta de cracking de hashes con interfaz web moderna. Funciona 100% offlin
 - [Motor de cracking](#motor-de-cracking)
 - [Tipos de hash soportados](#tipos-de-hash-soportados)
 - [Gestión de wordlists](#gestión-de-wordlists)
-- [Generador de hashes (CyberChef)](#generador-de-hashes-cyberchef)
+- [Generador de hashes](#generador-de-hashes)
 - [Internacionalización](#internacionalización)
 - [Tema claro / oscuro](#tema-claro--oscuro)
 - [API REST](#api-rest)
@@ -68,7 +68,7 @@ HashCrack es una aplicación de escritorio (frontend web + backend local) diseñ
 - **Rainbow table** integrada con ~700+ contraseñas comunes × 12 algoritmos (lookup instantáneo)
 - **Dictionary attack** con cualquier wordlist, procesamiento por streaming
 - **Rules attack** con ~75 transformaciones (l33t, capitalización, sufijos, años, símbolos, etc.)
-- **Brute force** — fuerza bruta para contraseñas cortas (dígitos hasta 8 chars, letras hasta 4 chars)
+- **Brute force** — fuerza bruta para contraseñas cortas (dígitos hasta 8 chars, minúsculas hasta 6, mayúsculas hasta 4, alfanumérico hasta 5)
 - **Motor con fallback integrado** — si no hay wordlist, el engine prueba automáticamente ~700 contraseñas comunes + todas las reglas
 - **Detección inteligente de variantes** — para hashes ambiguos (misma longitud hex) se prueban todos los algoritmos posibles y se devuelve el tipo correcto
 - **Gestión de wordlists** — escaneo automático del sistema, carga por drag & drop, estadísticas de efectividad
@@ -77,7 +77,7 @@ HashCrack es una aplicación de escritorio (frontend web + backend local) diseñ
 - **Progreso en tiempo real** vía WebSocket
 - **Exportación** en JSON, CSV, TXT y formato potfile (compatible con Hashcat / John)
 - **Persistencia** — los hashes crackeados se guardan en SQLite para consultas posteriores
-- **Generador de hashes** — enlaces directos a CyberChef para generar MD5, SHA1, SHA256, NT Hash, bcrypt y más
+- **Generador de hashes integrado** — genera MD5, SHA1, SHA256, NTLM y más directamente en la interfaz. Escribe texto plano y el hash se genera en tiempo real, sin dependencias externas
 - **Estadísticas avanzadas** — distribución por tipo/estrategia, hashes expandibles, filtros por tipo de hash y estrategia
 - **Interfaz dark / light** — tema oscuro y claro con cambio instantáneo
 - **Bilingüe (ES/EN)** — español por defecto, inglés disponible desde el header
@@ -239,7 +239,7 @@ La documentación interactiva de la API está disponible en `http://localhost:80
 
 ## Interfaz de usuario
 
-La aplicación tiene tres secciones principales accesibles desde la barra de navegación superior. El header incluye además un selector de **idioma** (ES/EN), un botón de **tema** (☀/🌙) y un indicador de estado.
+La aplicación tiene cuatro secciones principales accesibles desde la barra de navegación superior: **Cracker**, **Wordlists**, **Generador** y **Estadísticas**. El header incluye además un selector de **idioma** (ES/EN), un botón de **tema** (☀/🌙), un indicador de estado y el **logo** que sirve como acceso directo a la pestaña Cracker.
 
 ### Pestaña Cracker
 
@@ -251,7 +251,6 @@ Flujo de trabajo principal:
 2. **Opciones de cracking** — selecciona las estrategias a usar y la wordlist activa.
 3. **Iniciar / Detener** — el botón principal lanza la tarea. El progreso se muestra en tiempo real.
 4. **Resultados** — tabla con cada hash crackeado, tipo detectado real, contraseña encontrada, estrategia utilizada y tiempo de resolución.
-5. **Generador de hashes** — panel con botones que abren CyberChef directamente con la receta del tipo de hash seleccionado (MD5, SHA1, NT Hash, etc.).
 
 ```
 ┌─────────────────────────────────────────────────────────┐
@@ -268,12 +267,6 @@ Flujo de trabajo principal:
 │  │  Hash           Tipo    Contraseña   Estrategia   │  │
 │  │  5f4dcc3b...    md5     password     rainbow      │  │
 │  └──────────────────────────────────────────────────┘  │
-│                                         │               │
-│  ┌─ Generador ──────────────────────────┤               │
-│  │  [MD5] [SHA1] [SHA256] [NT Hash]    │               │
-│  │  [SHA3-256] [Bcrypt] [Whirlpool]    │               │
-│  │  → abre CyberChef con la receta     │               │
-│  └──────────────────────────────────────┘               │
 │            ┌─ Opciones ─────────────────┤               │
 │            │  ☑ Rainbow Tables          │               │
 │            │  ☑ Dictionary Attack       │               │
@@ -410,7 +403,9 @@ Aplica ~75 transformaciones a cada palabra de la wordlist antes de hashear. Tamb
 Prueba todas las combinaciones posibles de caracteres cortos:
 
 - **Fase 1**: Todos los dígitos (`0`-`9`) de 1 a 8 caracteres
-- **Fase 2**: Todas las letras minúsculas (`a`-`z`) de 1 a 4 caracteres
+- **Fase 2**: Todas las letras minúsculas (`a`-`z`) de 1 a 6 caracteres
+- **Fase 3**: Todas las letras mayúsculas (`A`-`Z`) de 1 a 4 caracteres
+- **Fase 4**: Alfanumérico (`a`-`z` + `0`-`9`) de 1 a 5 caracteres
 - **Velocidad**: depende del algoritmo y longitud — rápido para hashes de 1-4 dígitos
 - **Ideal para**: PINs, códigos numéricos cortos, contraseñas triviales
 
@@ -526,27 +521,56 @@ Cada vez que se usa una wordlist en una tarea, HashCrack registra:
 
 ---
 
-## Generador de hashes (CyberChef)
+## Generador de hashes
 
-La pestaña **Cracker** incluye un panel con enlaces directos a [CyberChef](https://gchq.github.io/CyberChef/) para generar hashes de distintos tipos. Cada botón abre CyberChef en una nueva pestaña del navegador con la receta pre-cargada:
+La pestaña **Generador** permite generar hashes directamente en la interfaz, sin dependencias externas. Funciona 100% local a través del backend FastAPI.
 
-| Tipo | URL de CyberChef |
-|---|---|
-| MD5 | `https://gchq.github.io/CyberChef/#recipe=MD5()` |
-| MD4 | `https://gchq.github.io/CyberChef/#recipe=MD4()` |
-| SHA1 | `https://gchq.github.io/CyberChef/#recipe=SHA1()` |
-| SHA-224 | `https://gchq.github.io/CyberChef/#recipe=SHA2('224')` |
-| SHA-256 | `https://gchq.github.io/CyberChef/#recipe=SHA2('256')` |
-| SHA-384 | `https://gchq.github.io/CyberChef/#recipe=SHA2('384')` |
-| SHA-512 | `https://gchq.github.io/CyberChef/#recipe=SHA2('512')` |
-| SHA3-256 | `https://gchq.github.io/CyberChef/#recipe=SHA3('256')` |
-| SHA3-512 | `https://gchq.github.io/CyberChef/#recipe=SHA3('512')` |
-| NT Hash | `https://gchq.github.io/CyberChef/#recipe=NT_Hash()` |
-| LM Hash | `https://gchq.github.io/CyberChef/#recipe=LM_Hash()` |
-| Bcrypt | `https://gchq.github.io/CyberChef/#recipe=Bcrypt(10)` |
-| Whirlpool | `https://gchq.github.io/CyberChef/#recipe=Whirlpool()` |
+### Características
 
-> CyberChef se ejecuta enteramente en el navegador — no envía datos a ningún servidor.
+- **Generación en tiempo real** — los hashes se calculan automáticamente mientras escribes, igual que CyberChef
+- **Múltiples líneas** — escribe varias contraseñas (una por línea) y obtén todos los hashes a la vez
+- **13 algoritmos soportados**:
+  - MD5, MD4
+  - SHA1, SHA-224, SHA-256, SHA-384, SHA-512
+  - SHA3-256, SHA3-512
+  - NTLM
+  - RIPEMD-160, Whirlpool
+  - MySQL 3.23
+- **Selector visual** — pills de colores por familia de algoritmo
+- **Copiar y exportar** — botones para copiar al portapapeles o exportar en JSON, CSV, TXT
+
+### Uso
+
+1. Ve a la pestaña **Generador**
+2. Selecciona el tipo de hash (por defecto MD5)
+3. Escribe o pega texto plano en el textarea superior (una línea = un hash)
+4. Los hashes aparecen automáticamente en el textarea inferior
+5. Usa los botones de **Copiar** o **Exportar** para guardar los resultados
+
+### API
+
+```http
+POST /api/generator/batch
+Content-Type: application/json
+
+{
+  "texts": ["password", "admin", "123456"],
+  "algorithm": "md5"
+}
+```
+
+Respuesta:
+
+```json
+{
+  "hashes": [
+    "5f4dcc3b5aa765d61d8327deb882cf99",
+    "21232f297a57a5a743894a0e4a801fc3",
+    "e10adc3949ba59abbe56e057f20f883e"
+  ],
+  "algorithm": "md5"
+}
+```
 
 ---
 
@@ -717,6 +741,24 @@ GET /api/results/export/txt
 GET /api/results/export/potfile
 ```
 
+#### Generar hashes (batch)
+
+```http
+POST /api/generator/batch
+Content-Type: application/json
+
+{
+  "texts": ["password", "admin"],
+  "algorithm": "sha256"
+}
+```
+
+#### Listar algoritmos de generación
+
+```http
+GET /api/generator/algorithms
+```
+
 ---
 
 ## Estructura del proyecto
@@ -742,7 +784,8 @@ HashCrack/
 │           └── routes/
 │               ├── crack.py       /api/crack, /api/detect, /api/results/export
 │               ├── wordlists.py   /api/wordlists (CRUD + upload + scan)
-│               └── statistics.py  /api/stats, /api/tasks
+│               ├── statistics.py  /api/stats, /api/tasks
+│               └── generate.py    /api/generator (generación de hashes)
 │
 ├── frontend/
 │   ├── index.html
@@ -752,7 +795,7 @@ HashCrack/
 │   ├── postcss.config.js
 │   └── src/
 │       ├── main.jsx               Entry point React
-│       ├── App.jsx                Layout principal, 3 tabs, sincronización tema
+│       ├── App.jsx                Layout principal, 4 tabs, sincronización tema
 │       ├── index.css              Clases Tailwind globales + overrides light mode
 │       ├── i18n.js                Traducciones ES/EN (~100+ claves)
 │       ├── store/
@@ -763,7 +806,7 @@ HashCrack/
 │           ├── CrackingOptions.jsx Estrategias + selector de wordlist
 │           ├── ProgressPanel.jsx   Botón inicio/parada + progreso live
 │           ├── Results.jsx         Tabla de resultados + exportación
-│           ├── HashGenerator.jsx   Generador de hashes → CyberChef
+│           ├── HashGeneratorPage.jsx Generador de hashes integrado (13 algoritmos)
 │           ├── WordlistManager.jsx Gestión completa de wordlists
 │           └── StatsView.jsx       Estadísticas, filtros, hashes expandibles
 │
