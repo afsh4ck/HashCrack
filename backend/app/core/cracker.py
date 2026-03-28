@@ -4,9 +4,11 @@ import time
 import itertools
 import string
 import os
-import multiprocessing
-from concurrent.futures import ProcessPoolExecutor, as_completed
+import threading
+from concurrent.futures import ThreadPoolExecutor
 from typing import Optional, Callable
+
+_WORKER_COUNT = max(2, os.cpu_count() or 4)
 
 # ──────────────────────────────────────────────
 #  Inline rainbow table: top common passwords
@@ -646,11 +648,12 @@ def crack_batch(
     stop_flag: Optional[list] = None,
     on_cracked: Optional[Callable] = None,
 ):
-    """Crack multiple hashes efficiently. hash_entries = [(hash_value, hash_type, variants), ...].
+    """Crack multiple hashes efficiently with multi-threaded wordlist processing.
+    hash_entries = [(hash_value, hash_type, variants), ...].
     Calls on_cracked(index, result_dict) for each cracked hash.
     Returns dict of {index: result_dict}."""
     results = {}
-    remaining = {}  # index -> (hash_lower, types_to_try)
+    remaining = {}  # index -> (hash_lower, raw, types)
     starts = {}
 
     for i, (hv, ht, variants) in enumerate(hash_entries):
@@ -677,10 +680,10 @@ def crack_batch(
     if not remaining:
         return results
 
-    # 2+3. Dictionary + Rules: single wordlist pass for ALL remaining hashes
+    # 2+3. Dictionary + Rules: multi-threaded wordlist processing
     if wordlist_path and remaining:
-        # Build target set: hash_lower -> [(index, hash_type, hasher)]
-        target_map = {}
+        # Build target set per hash_type: hash_lower -> index
+        target_map = {}  # ht -> [(index, hash_lower, hasher_fn)]
         for i, (h, raw, types) in remaining.items():
             for ht in types:
                 fn = _make_fast_hasher(ht)
@@ -691,57 +694,59 @@ def crack_batch(
         use_rules = "rules" in strategies
 
         if (use_dict or use_rules) and target_map:
-            # Group by hash_type for efficient batch checking
             type_targets = []
             for ht, entries in target_map.items():
-                fn = entries[0][2]  # all same type share same hasher
+                fn = entries[0][2]
                 hash_set = {e[1]: e[0] for e in entries}  # hash_lower -> index
                 type_targets.append((ht, fn, hash_set))
 
-            found_indices = set()
-
-            # Dictionary pass
-            if use_dict:
-                count = 0
+            # Read entire wordlist into memory for parallel chunk processing
+            try:
                 with open(wordlist_path, "r", encoding="utf-8", errors="ignore") as f:
-                    for line in f:
-                        if stop_flag and stop_flag[0]:
+                    lines = f.readlines()
+            except Exception:
+                lines = []
+
+            if lines:
+                found_lock = threading.Lock()
+                found_indices = set()
+                all_found_event = threading.Event()
+                total_remaining = len(remaining)
+
+                def _process_chunk_dict(chunk):
+                    """Process a chunk of wordlist lines for dictionary attack."""
+                    local_results = []
+                    for raw_line in chunk:
+                        if all_found_event.is_set() or (stop_flag and stop_flag[0]):
                             break
-                        count += 1
-                        if count % 5000 == 0 and stop_flag and stop_flag[0]:
-                            break
-                        word = line.rstrip("\n\r")
+                        word = raw_line.rstrip("\n\r")
                         if not word:
                             continue
                         for ht, fn, hash_set in type_targets:
                             computed = fn(word)
-                            idx = hash_set.get(computed)
-                            if idx is not None and idx not in found_indices:
-                                elapsed = (time.perf_counter() - starts[idx]) * 1000
-                                result = {"plaintext": word, "strategy": "dictionary", "time_ms": round(elapsed, 3), "hash_type": ht}
-                                results[idx] = result
-                                found_indices.add(idx)
-                                if on_cracked:
-                                    on_cracked(idx, result)
-                                del hash_set[computed]
-                        # All found?
-                        if len(found_indices) == len(remaining):
-                            break
+                            with found_lock:
+                                idx = hash_set.get(computed)
+                                if idx is not None and idx not in found_indices:
+                                    found_indices.add(idx)
+                                    elapsed = (time.perf_counter() - starts[idx]) * 1000
+                                    local_results.append((idx, ht, word, "dictionary", elapsed))
+                                    del hash_set[computed]
+                                    if len(found_indices) >= total_remaining:
+                                        all_found_event.set()
+                    return local_results
 
-            # Rules pass
-            if use_rules and len(found_indices) < len(remaining):
-                count = 0
-                with open(wordlist_path, "r", encoding="utf-8", errors="ignore") as f:
-                    for line in f:
-                        if stop_flag and stop_flag[0]:
+                def _process_chunk_rules(chunk):
+                    """Process a chunk of wordlist lines for rules attack."""
+                    local_results = []
+                    for raw_line in chunk:
+                        if all_found_event.is_set() or (stop_flag and stop_flag[0]):
                             break
-                        count += 1
-                        if count % 2000 == 0 and stop_flag and stop_flag[0]:
-                            break
-                        base = line.rstrip("\n\r")
+                        base = raw_line.rstrip("\n\r")
                         if not base:
                             continue
                         for rule in RULES:
+                            if all_found_event.is_set():
+                                break
                             try:
                                 variant = rule(base)
                                 if not variant:
@@ -750,20 +755,48 @@ def crack_batch(
                                 continue
                             for ht, fn, hash_set in type_targets:
                                 computed = fn(variant)
-                                idx = hash_set.get(computed)
-                                if idx is not None and idx not in found_indices:
-                                    elapsed = (time.perf_counter() - starts[idx]) * 1000
-                                    result = {"plaintext": variant, "strategy": "rules", "time_ms": round(elapsed, 3), "hash_type": ht}
-                                    results[idx] = result
-                                    found_indices.add(idx)
-                                    if on_cracked:
-                                        on_cracked(idx, result)
-                                    del hash_set[computed]
-                        if len(found_indices) == len(remaining):
-                            break
+                                with found_lock:
+                                    idx = hash_set.get(computed)
+                                    if idx is not None and idx not in found_indices:
+                                        found_indices.add(idx)
+                                        elapsed = (time.perf_counter() - starts[idx]) * 1000
+                                        local_results.append((idx, ht, variant, "rules", elapsed))
+                                        del hash_set[computed]
+                                        if len(found_indices) >= total_remaining:
+                                            all_found_event.set()
+                    return local_results
+
+                # Split lines into chunks for parallel processing
+                n_workers = _WORKER_COUNT
+                chunk_size = max(1, len(lines) // n_workers)
+                chunks = [lines[i:i + chunk_size] for i in range(0, len(lines), chunk_size)]
+
+                # Dictionary pass (multi-threaded)
+                if use_dict:
+                    with ThreadPoolExecutor(max_workers=n_workers) as pool:
+                        futures = [pool.submit(_process_chunk_dict, c) for c in chunks]
+                        for fut in futures:
+                            for idx, ht, word, strategy, elapsed in fut.result():
+                                result = {"plaintext": word, "strategy": strategy, "time_ms": round(elapsed, 3), "hash_type": ht}
+                                results[idx] = result
+                                if on_cracked:
+                                    on_cracked(idx, result)
+
+                # Rules pass (multi-threaded) — only for still-unfound hashes
+                if use_rules and len(found_indices) < total_remaining:
+                    all_found_event.clear()
+                    with ThreadPoolExecutor(max_workers=n_workers) as pool:
+                        futures = [pool.submit(_process_chunk_rules, c) for c in chunks]
+                        for fut in futures:
+                            for idx, ht, word, strategy, elapsed in fut.result():
+                                result = {"plaintext": word, "strategy": strategy, "time_ms": round(elapsed, 3), "hash_type": ht}
+                                results[idx] = result
+                                if on_cracked:
+                                    on_cracked(idx, result)
 
             for i in found_indices:
-                del remaining[i]
+                if i in remaining:
+                    del remaining[i]
 
     if not remaining:
         return results

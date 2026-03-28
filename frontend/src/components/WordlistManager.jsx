@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Upload, RefreshCw, Trash2, Eye, FolderSearch, BookOpen, CheckCircle2, Filter, ExternalLink, Download, Search, X, FolderOpen } from 'lucide-react'
+import { Upload, RefreshCw, Trash2, Eye, FolderSearch, BookOpen, CheckCircle2, Filter, ExternalLink, Download, Search, X, FolderOpen, AlertTriangle } from 'lucide-react'
 import useStore from '../store/useStore'
 import { t } from '../i18n'
 
@@ -38,6 +38,7 @@ export default function WordlistManager() {
   const fileRef = useRef()
   const [uploading, setUploading] = useState(false)
   const [scanMsg, setScanMsg] = useState(null)
+  const [scanning, setScanning] = useState(false)
   const [preview, setPreview] = useState(null)
   const [searchQuery, setSearchQuery] = useState('')
 
@@ -75,7 +76,9 @@ export default function WordlistManager() {
 
   const handleScan = async () => {
     setScanMsg(null)
+    setScanning(true)
     const data = await scanWordlists()
+    setScanning(false)
     if (data) setScanMsg(t('wl.found', language, { n: data.found }))
   }
 
