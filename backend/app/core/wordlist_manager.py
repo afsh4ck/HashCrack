@@ -4,7 +4,7 @@ import zipfile
 import shutil
 from pathlib import Path
 from typing import List, Optional
-from app.config import SYSTEM_WORDLIST_DIRS, WORDLIST_EXTENSIONS, WORDLIST_COMPRESSED, TEMP_DIR, CATEGORY_PATTERNS
+from app.config import SYSTEM_WORDLIST_DIRS, WORDLIST_EXTENSIONS, WORDLIST_COMPRESSED, TEMP_DIR, CATEGORY_PATTERNS, CATEGORY_BASE_DIRS
 from app.database import get_db
 
 def _count_lines(path: str) -> int:
@@ -40,6 +40,24 @@ def _detect_category(path: str, is_custom: int = 0) -> str:
             if pat.lower() in path.lower():
                 return cat
     return "Other"
+
+def _detect_subcategory(path: str, category: str) -> str:
+    """Extract the first subfolder relative to the category base directory."""
+    if category not in CATEGORY_BASE_DIRS:
+        return ""
+    for base in CATEGORY_BASE_DIRS[category]:
+        base_lower = base.rstrip("/").lower()
+        path_lower = path.lower()
+        idx = path_lower.find(base_lower)
+        if idx == -1:
+            continue
+        # Get relative path after the base dir
+        relative = path[idx + len(base_lower):].lstrip("/").lstrip("\\")
+        parts = relative.replace("\\", "/").split("/")
+        # First part is the subfolder (subcategory), ignore the filename itself
+        if len(parts) > 1:
+            return parts[0]
+    return ""
 
 def _is_wordlist(filename: str) -> bool:
     name = filename.lower()
@@ -124,14 +142,15 @@ def register_wordlist(path: str, name: Optional[str] = None, is_custom: int = 1)
     size = os.path.getsize(actual_path) if os.path.exists(actual_path) else 0
     words = _estimate_lines(actual_path, size)
     category = _detect_category(actual_path, is_custom)
+    subcategory = _detect_subcategory(actual_path, category)
 
     db = get_db()
     try:
         db.execute(
             """INSERT OR REPLACE INTO wordlists
-               (name, path, total_words, file_size, is_custom, category)
-               VALUES (?, ?, ?, ?, ?, ?)""",
-            (file_name, actual_path, words, size, is_custom, category),
+               (name, path, total_words, file_size, is_custom, category, subcategory)
+               VALUES (?, ?, ?, ?, ?, ?, ?)""",
+            (file_name, actual_path, words, size, is_custom, category, subcategory),
         )
         db.commit()
         row = db.execute("SELECT * FROM wordlists WHERE name = ?", (file_name,)).fetchone()
@@ -149,6 +168,14 @@ def get_wordlist_categories() -> List[str]:
     db = get_db()
     rows = db.execute("SELECT DISTINCT category FROM wordlists WHERE category IS NOT NULL ORDER BY category").fetchall()
     return [r["category"] for r in rows]
+
+def get_wordlist_subcategories(category: str) -> List[str]:
+    db = get_db()
+    rows = db.execute(
+        "SELECT DISTINCT subcategory FROM wordlists WHERE category = ? AND subcategory IS NOT NULL AND subcategory != '' ORDER BY subcategory",
+        (category,),
+    ).fetchall()
+    return [r["subcategory"] for r in rows]
 
 def get_wordlist_by_id(wid: int) -> Optional[dict]:
     db = get_db()

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Upload, RefreshCw, Trash2, Eye, FolderSearch, BookOpen, CheckCircle2, Filter, ExternalLink, Download, Search, X } from 'lucide-react'
+import { Upload, RefreshCw, Trash2, Eye, FolderSearch, BookOpen, CheckCircle2, Filter, ExternalLink, Download, Search, X, FolderOpen } from 'lucide-react'
 import useStore from '../store/useStore'
 import { t } from '../i18n'
 
@@ -34,7 +34,7 @@ function fmtWords(n) {
 }
 
 export default function WordlistManager() {
-  const { wordlists, loadingWordlists, fetchWordlists, scanWordlists, deleteWordlist, selectedWordlistId, setSelectedWordlistId, language, wordlistCategories, selectedCategory, setSelectedCategory } = useStore()
+  const { wordlists, loadingWordlists, fetchWordlists, scanWordlists, deleteWordlist, selectedWordlistId, setSelectedWordlistId, language, wordlistCategories, selectedCategory, setSelectedCategory, wordlistSubcategories, selectedSubcategory, setSelectedSubcategory, fetchSubcategories } = useStore()
   const fileRef = useRef()
   const [uploading, setUploading] = useState(false)
   const [scanMsg, setScanMsg] = useState(null)
@@ -43,8 +43,13 @@ export default function WordlistManager() {
 
   useEffect(() => { fetchWordlists() }, [])
 
+  useEffect(() => {
+    fetchSubcategories(selectedCategory)
+  }, [selectedCategory])
+
   const filteredWordlists = wordlists.filter((wl) => {
     if (selectedCategory && wl.category !== selectedCategory) return false
+    if (selectedSubcategory && wl.subcategory !== selectedSubcategory) return false
     if (searchQuery) {
       const q = searchQuery.toLowerCase()
       return wl.name.toLowerCase().includes(q) || (wl.path && wl.path.toLowerCase().includes(q)) || (wl.category && wl.category.toLowerCase().includes(q))
@@ -155,6 +160,40 @@ export default function WordlistManager() {
           )}
         </div>
       </div>
+
+      {/* Subcategory Filters (folder-level) */}
+      {selectedCategory && wordlistSubcategories.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2 animate-fade-in">
+          <FolderOpen size={13} className="text-white/20 shrink-0" />
+          <button
+            onClick={() => setSelectedSubcategory(null)}
+            className={`px-2.5 py-1 rounded-lg text-[11px] font-medium border transition-all duration-200 ${
+              !selectedSubcategory
+                ? 'bg-cyan-400/10 text-cyan-300 border-cyan-400/20'
+                : 'bg-white/[0.02] text-white/25 border-white/[0.06] hover:border-white/[0.12] hover:text-white/40'
+            }`}
+          >
+            {t('wl.filterAll', language)} ({wordlists.filter((w) => w.category === selectedCategory).length})
+          </button>
+          {wordlistSubcategories.map((sub) => {
+            const count = wordlists.filter((w) => w.category === selectedCategory && w.subcategory === sub).length
+            const colorCls = CATEGORY_COLORS[selectedCategory] || CATEGORY_COLORS.Other
+            return (
+              <button
+                key={sub}
+                onClick={() => setSelectedSubcategory(selectedSubcategory === sub ? null : sub)}
+                className={`px-2.5 py-1 rounded-lg text-[11px] font-medium border transition-all duration-200 ${
+                  selectedSubcategory === sub
+                    ? colorCls
+                    : 'bg-white/[0.02] text-white/25 border-white/[0.06] hover:border-white/[0.12] hover:text-white/40'
+                }`}
+              >
+                {sub} ({count})
+              </button>
+            )
+          })}
+        </div>
+      )}
 
       {/* Upload Drop Zone */}
       <div

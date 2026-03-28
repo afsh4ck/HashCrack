@@ -6,7 +6,7 @@ from fastapi import APIRouter, UploadFile, File, HTTPException, Form
 from app.core.wordlist_manager import (
     scan_directories, register_wordlist, get_all_wordlists,
     get_wordlist_by_id, delete_wordlist, preview_wordlist,
-    get_wordlist_categories,
+    get_wordlist_categories, get_wordlist_subcategories,
 )
 from app.config import TEMP_DIR
 
@@ -23,6 +23,10 @@ async def list_wordlists():
 @router.get("/categories")
 async def list_categories():
     return get_wordlist_categories()
+
+@router.get("/subcategories")
+async def list_subcategories(category: str):
+    return get_wordlist_subcategories(category)
 
 @router.post("/scan")
 async def scan_wordlists():

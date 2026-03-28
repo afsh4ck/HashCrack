@@ -67,5 +67,11 @@ def init_db():
     except sqlite3.OperationalError:
         cur.execute("ALTER TABLE wordlists ADD COLUMN category TEXT DEFAULT 'Other'")
 
+    # Migration: add subcategory column if missing
+    try:
+        cur.execute("SELECT subcategory FROM wordlists LIMIT 1")
+    except sqlite3.OperationalError:
+        cur.execute("ALTER TABLE wordlists ADD COLUMN subcategory TEXT DEFAULT ''")
+
     conn.commit()
     conn.close()

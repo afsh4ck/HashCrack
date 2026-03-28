@@ -46,6 +46,18 @@ CATEGORY_PATTERNS = {
     "System":      ["/usr/share/dict/"],
 }
 
+# Base directories per category (for subcategory extraction)
+CATEGORY_BASE_DIRS = {
+    "SecLists":    ["/usr/share/seclists", "/opt/SecLists"],
+    "Metasploit":  ["/usr/share/metasploit-framework/data/wordlists"],
+    "Dirb":        ["/usr/share/dirb/wordlists"],
+    "Dirbuster":   ["/usr/share/dirbuster/wordlists"],
+    "Wfuzz":       ["/usr/share/wfuzz/wordlist"],
+    "John":        ["/usr/share/john"],
+    "Nmap":        ["/usr/share/nmap/nselib/data"],
+    "SQLMap":      ["/usr/share/sqlmap/data/txt"],
+}
+
 WORDLIST_EXTENSIONS = {".txt", ".lst", ".dict", ".csv", ".list"}
 WORDLIST_COMPRESSED = {".gz", ".zip", ".bz2", ".xz"}
 

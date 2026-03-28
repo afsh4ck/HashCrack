@@ -48,12 +48,27 @@ const useStore = create((set, get) => ({
   loadingWordlists: false,
   wordlistCategories: [],
   selectedCategory: null,
-  setSelectedCategory: (c) => set({ selectedCategory: c }),
+  setSelectedCategory: (c) => set({ selectedCategory: c, selectedSubcategory: null }),
+  wordlistSubcategories: [],
+  selectedSubcategory: null,
+  setSelectedSubcategory: (s) => set({ selectedSubcategory: s }),
 
   // Stats
   stats: null,
 
   // ─── Actions ───────────────────────────────────────────────
+  fetchSubcategories: async (category) => {
+    if (!category) { set({ wordlistSubcategories: [] }); return }
+    try {
+      const res = await fetch(`${API}/api/wordlists/subcategories?category=${encodeURIComponent(category)}`)
+      const data = await res.json()
+      set({ wordlistSubcategories: data })
+    } catch (e) {
+      console.error('fetchSubcategories', e)
+      set({ wordlistSubcategories: [] })
+    }
+  },
+
   fetchWordlists: async (retry = 0) => {
     set({ loadingWordlists: true })
     try {
@@ -63,7 +78,7 @@ const useStore = create((set, get) => ({
       ])
       const data = await wlRes.json()
       const categories = await catRes.json()
-      set({ wordlists: data, wordlistCategories: categories })
+      set({ wordlists: data, wordlistCategories: categories, wordlistSubcategories: [] })
       // Auto-select default wordlist if none selected yet
       const { selectedWordlistId } = get()
       if (!selectedWordlistId && data.length > 0) {
@@ -98,7 +113,7 @@ const useStore = create((set, get) => ({
       try {
         const catRes = await fetch(`${API}/api/wordlists/categories`)
         const categories = await catRes.json()
-        set({ wordlistCategories: categories })
+        set({ wordlistCategories: categories, wordlistSubcategories: [] })
       } catch {}
       return data
     } catch (e) {
