@@ -2,7 +2,7 @@
 
 Herramienta de cracking de hashes con interfaz web moderna. Funciona 100% offline, sin enviar datos a ningún servidor externo.
 
-![hashcrack-1](https://github.com/user-attachments/assets/4480e73d-ec57-4188-a7f5-2043bd432cc2)
+![hashcrack-cracker](https://github.com/user-attachments/assets/1f0a206b-56df-43b1-9463-60beff6b823f)
 
 ---
 
@@ -243,7 +243,7 @@ La aplicación tiene cuatro secciones principales accesibles desde la barra de n
 
 ### Pestaña Cracker
 
-<img width="2904" height="1756" alt="image" src="https://github.com/user-attachments/assets/cfcaece8-b8cd-46fa-85a9-4d72e0ba5c44" />
+![hashcrack-cracker](https://github.com/user-attachments/assets/635d4044-3c91-4b29-b4ee-4c8bafa95b74)
 
 Flujo de trabajo principal:
 
@@ -283,7 +283,7 @@ Flujo de trabajo principal:
 
 ### Pestaña Wordlists
 
-<img width="2674" height="1386" alt="image" src="https://github.com/user-attachments/assets/82957a2b-0cad-4ebd-9124-41b2d1059e0c" />
+![hashcrack-wordlists](https://github.com/user-attachments/assets/84c5c324-5ade-4b7a-9926-c1db3599b59c)
 
 Gestión completa de wordlists:
 
@@ -332,6 +332,8 @@ En sistemas con muchas wordlists (como Kali Linux), las wordlists se clasifican 
 Los filtros aparecen como botones con colores diferenciados y conteo de wordlists por categoría. Solo se muestran las categorías que existen en el sistema.
 
 ### Pestaña Estadísticas
+
+![hashcrack-stats](https://github.com/user-attachments/assets/6d0af807-02a8-4d67-bdcf-1a1153f41978)
 
 <img width="2878" height="1926" alt="image" src="https://github.com/user-attachments/assets/ccb5f967-13bb-498c-bfce-efe3694ca12c" />
 
@@ -522,6 +524,8 @@ Cada vez que se usa una wordlist en una tarea, HashCrack registra:
 ---
 
 ## Generador de hashes
+
+![hashcrack-gen](https://github.com/user-attachments/assets/03b29cc8-5587-4b49-bde7-6c2187d24025)
 
 La pestaña **Generador** permite generar hashes directamente en la interfaz, sin dependencias externas. Funciona 100% local a través del backend FastAPI.
 
