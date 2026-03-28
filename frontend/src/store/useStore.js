@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 
-const API = 'http://localhost:8000'
+const API = ''
+const WS_BASE = `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}`
 const DEFAULT_WORDLIST_NAME = 'rockyou-50.txt'
 
 const useStore = create((set, get) => ({
@@ -142,7 +143,7 @@ const useStore = create((set, get) => ({
       set({ taskId: data.task_id, results: [], taskStatus: { status: 'queued', processed: 0, cracked: 0, total: hashes.length, results: [] } })
 
       // Open WebSocket
-      const ws = new WebSocket(`ws://localhost:8000/ws/${data.task_id}`)
+      const ws = new WebSocket(`${WS_BASE}/ws/${data.task_id}`)
       ws.onmessage = (e) => {
         const payload = JSON.parse(e.data)
         set({ taskStatus: payload })

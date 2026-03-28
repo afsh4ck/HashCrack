@@ -1,9 +1,8 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { FlaskConical, Copy, CheckCircle2, Download, ChevronDown, RotateCcw } from 'lucide-react'
 import useStore from '../store/useStore'
 import { t } from '../i18n'
-
-const API = 'http://localhost:8000'
+import { computeHash, isClientSupported } from '../hashUtils'
 
 const UNIQUE_ALGORITHMS = [
   { id: 'md5',       name: 'MD5',        color: 'cyan' },
@@ -34,34 +33,48 @@ export default function HashGeneratorPage() {
   const [plaintext, setPlaintext] = useState('')
   const [hashes, setHashes] = useState('')
   const [copied, setCopied] = useState(false)
-  const debounceRef = useRef(null)
+  const timerRef = useRef(null)
 
-  const generateBatch = useCallback(async (text, algo) => {
-    const lines = text.split('\n')
+  useEffect(() => {
+    if (timerRef.current) clearTimeout(timerRef.current)
+
+    const lines = plaintext.split('\n')
     if (!lines.some(l => l.length > 0)) {
       setHashes('')
       return
     }
-    try {
-      const res = await fetch(`${API}/api/generator/batch`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ texts: lines, algorithm: algo }),
-      })
-      const data = await res.json()
-      setHashes((data.hashes || []).join('\n'))
-    } catch {
-      setHashes('')
-    }
-  }, [])
 
-  useEffect(() => {
-    if (debounceRef.current) clearTimeout(debounceRef.current)
-    debounceRef.current = setTimeout(() => {
-      generateBatch(plaintext, algorithm)
-    }, 150)
-    return () => clearTimeout(debounceRef.current)
-  }, [plaintext, algorithm, generateBatch])
+    let cancelled = false
+
+    const generate = async () => {
+      if (isClientSupported(algorithm)) {
+        const results = await Promise.all(
+          lines.map(line => line.length > 0 ? computeHash(line, algorithm) : Promise.resolve(''))
+        )
+        if (!cancelled) setHashes(results.join('\n'))
+      } else {
+        // Fallback to backend for RIPEMD-160, Whirlpool
+        const body = JSON.stringify({ texts: lines, algorithm })
+        const opts = { method: 'POST', headers: { 'Content-Type': 'application/json' }, body }
+        try {
+          let res
+          try { res = await fetch('/api/generator/batch', opts) }
+          catch { res = await fetch('http://localhost:8000/api/generator/batch', opts) }
+          if (!cancelled && res.ok) {
+            const data = await res.json()
+            setHashes((data.hashes || []).join('\n'))
+          } else if (!cancelled) {
+            setHashes(lines.map(() => '(backend required)').join('\n'))
+          }
+        } catch {
+          if (!cancelled) setHashes(lines.map(() => '(backend required)').join('\n'))
+        }
+      }
+    }
+
+    timerRef.current = setTimeout(generate, 80)
+    return () => { cancelled = true; clearTimeout(timerRef.current) }
+  }, [plaintext, algorithm])
 
   const handleAlgoChange = (algo) => {
     setAlgorithm(algo)
@@ -111,7 +124,7 @@ export default function HashGeneratorPage() {
   const lineCount = plaintext ? plaintext.split('\n').length : 0
 
   return (
-    <div className="max-w-5xl mx-auto space-y-6 animate-fade-in">
+    <div className="space-y-6 animate-fade-in">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">

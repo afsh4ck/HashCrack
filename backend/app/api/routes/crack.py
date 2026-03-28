@@ -7,7 +7,7 @@ from fastapi.responses import JSONResponse
 
 from app.models import CrackRequest, TaskResponse, TaskStatus
 from app.core.detector import detect_hash
-from app.core.cracker import crack_single
+from app.core.cracker import crack_single, crack_batch
 from app.core.wordlist_manager import get_wordlist_by_id, update_wordlist_stats
 from app.database import get_db
 from app.api import ws_manager
@@ -49,10 +49,9 @@ async def _run_task(task_id: str, hashes: List[str], strategies: list,
 
     loop = asyncio.get_event_loop()
 
+    # Detect all hash types first
+    hash_entries = []
     for h in hashes:
-        if stop_flag[0]:
-            break
-
         try:
             detection = detect_hash(h)
             hash_type = detection.detected_type or "md5"
@@ -60,18 +59,29 @@ async def _run_task(task_id: str, hashes: List[str], strategies: list,
         except Exception:
             hash_type = "md5"
             variants = ["md5"]
+        hash_entries.append((h, hash_type, variants))
 
-        # Run CPU-bound cracking in executor
-        try:
-            crack_result = await loop.run_in_executor(
-                None,
-                crack_single,
-                h, hash_type, strategies, wordlist_path, stop_flag, variants,
-            )
-        except Exception:
-            crack_result = {}
+    # Use batch cracking for efficiency (single wordlist pass for all hashes)
+    batch_results = {}
 
+    def on_cracked(idx, result):
+        batch_results[idx] = result
+
+    try:
+        batch_results = await loop.run_in_executor(
+            None,
+            crack_batch,
+            hash_entries, strategies, wordlist_path, stop_flag, on_cracked,
+        )
+    except Exception:
+        batch_results = {}
+
+    # Process results and broadcast
+    for idx, (h, hash_type, variants) in enumerate(hash_entries):
+        if stop_flag[0]:
+            break
         processed += 1
+        crack_result = batch_results.get(idx)
         if crack_result:
             cracked += 1
             actual_type = crack_result.get("hash_type", hash_type)
@@ -93,14 +103,13 @@ async def _run_task(task_id: str, hashes: List[str], strategies: list,
         )
         db.commit()
 
-        # Broadcast every hash or every 10 if large batch
         if total <= 100 or processed % 10 == 0 or crack_result:
             await ws_manager.broadcast(task_id, {
                 "status": "running",
                 "total": total,
                 "processed": processed,
                 "cracked": cracked,
-                "results": results[-50:],  # last 50 only to keep payload small
+                "results": results[-50:],
             })
 
     if wordlist_name:

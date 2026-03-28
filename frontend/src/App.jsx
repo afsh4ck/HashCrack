@@ -25,11 +25,11 @@ export default function App() {
   }, [theme])
 
   return (
-    <div className="min-h-screen bg-surface-900 bg-grid relative">
+    <div className="min-h-screen flex flex-col bg-surface-900 bg-grid relative">
       <div className="noise-overlay" />
       <Header />
 
-      <main className="relative max-w-7xl mx-auto px-6 py-8">
+      <main className="relative flex-1 max-w-7xl mx-auto px-6 py-8 w-full">
         {/* Cracker Tab */}
         {activeTab === 'cracker' && (
           <div className="grid lg:grid-cols-[1fr_380px] gap-6 animate-fade-in">
@@ -49,7 +49,7 @@ export default function App() {
 
         {/* Wordlists Tab */}
         {activeTab === 'wordlists' && (
-          <div className="max-w-4xl mx-auto animate-fade-in">
+          <div className="animate-fade-in">
             <div className="flex items-center gap-3 mb-8">
               <h1 className="text-2xl font-bold text-white tracking-tight">{t('wl.management', language)}</h1>
               <span className="badge badge-cyan">{t('general.local', language)}</span>
@@ -74,7 +74,7 @@ export default function App() {
         )}
       </main>
 
-      <footer className="relative text-center py-6 mt-8 border-t border-white/[0.04]">
+      <footer className="relative text-center py-6 border-t border-white/[0.04]">
         <p className="text-xs text-white/25">
           Developed by{' '}
           <a

@@ -3,6 +3,9 @@ import hmac
 import time
 import itertools
 import string
+import os
+import multiprocessing
+from concurrent.futures import ProcessPoolExecutor, as_completed
 from typing import Optional, Callable
 
 # ──────────────────────────────────────────────
@@ -110,6 +113,43 @@ COMMON_PASSWORDS = [
     "Pa55w0rd","Passw0rd!","Password!","Welcome1","Welcome1!",
     "Qwerty123","Abc123!","Test1234","Temp1234","Change1",
 ]
+
+# ──────────────────────────────────────────────
+#  Fast hash builders (pre-bind algo for inner loops)
+# ──────────────────────────────────────────────
+
+def _make_fast_hasher(hash_type: str):
+    """Return a (word -> hex_digest) function optimized for the given hash_type."""
+    algo_map = {"sha3-256": "sha3_256", "sha3-512": "sha3_512"}
+    if hash_type in ("ntlm", "md4", "lm"):
+        def _h(word):
+            return hashlib.new("md4", word.encode("utf-16-le")).hexdigest()
+        return _h
+    elif hash_type == "mysql323":
+        def _h(word):
+            nr, nr2, add = 1345345333, 0x12345671, 7
+            for c in word:
+                if c in (" ", "\t"):
+                    continue
+                tmp = ord(c)
+                nr ^= (((nr & 63) + add) * tmp) + ((nr << 8) & 0xFFFFFFFF)
+                nr2 = (nr2 + ((nr2 << 8) ^ nr)) & 0xFFFFFFFF
+                add = (add + tmp) & 0xFFFFFFFF
+            return "%08x%08x" % (nr & 0x7FFFFFFF, nr2 & 0x7FFFFFFF)
+        return _h
+    elif hash_type == "bcrypt":
+        return None  # bcrypt uses verify, not computed hash
+    elif hash_type in ("md5crypt", "sha512crypt", "sha256crypt"):
+        return None  # passlib verify
+    else:
+        algo = algo_map.get(hash_type, hash_type)
+        try:
+            hashlib.new(algo, b"test")
+        except ValueError:
+            return None
+        def _h(word):
+            return hashlib.new(algo, word.encode("utf-8", errors="ignore")).hexdigest()
+        return _h
 
 # ──────────────────────────────────────────────
 #  Hash verification helpers
@@ -392,20 +432,27 @@ def dictionary_attack(
     stop_flag: Optional[list] = None,
 ) -> Optional[tuple]:
     h = hash_value.lower().strip()
+    # Pre-bind hash functions for speed
+    hashers = [(ht, _make_fast_hasher(ht)) for ht in hash_types]
+    hashers = [(ht, fn) for ht, fn in hashers if fn is not None]
+    if not hashers:
+        return None
     count = 0
+    check_interval = 5000
     with open(wordlist_path, "r", encoding="utf-8", errors="ignore") as f:
         for line in f:
-            if stop_flag and stop_flag[0]:
-                return None
+            count += 1
+            if count % check_interval == 0:
+                if stop_flag and stop_flag[0]:
+                    return None
+                if progress_cb:
+                    progress_cb(count)
             word = line.rstrip("\n\r")
             if not word:
                 continue
-            count += 1
-            for ht in hash_types:
-                if _verify_hash(word, h, ht):
+            for ht, fn in hashers:
+                if fn(word) == h:
                     return (word, ht)
-            if progress_cb and count % 50000 == 0:
-                progress_cb(count)
     return None
 
 def rules_attack(
@@ -416,26 +463,32 @@ def rules_attack(
     stop_flag: Optional[list] = None,
 ) -> Optional[tuple]:
     h = hash_value.lower().strip()
+    hashers = [(ht, _make_fast_hasher(ht)) for ht in hash_types]
+    hashers = [(ht, fn) for ht, fn in hashers if fn is not None]
+    if not hashers:
+        return None
     count = 0
+    check_interval = 2000
     with open(wordlist_path, "r", encoding="utf-8", errors="ignore") as f:
         for line in f:
-            if stop_flag and stop_flag[0]:
-                return None
+            count += 1
+            if count % check_interval == 0:
+                if stop_flag and stop_flag[0]:
+                    return None
+                if progress_cb:
+                    progress_cb(count)
             base = line.rstrip("\n\r")
             if not base:
                 continue
-            count += 1
             for rule in RULES:
                 try:
                     variant = rule(base)
                     if variant:
-                        for ht in hash_types:
-                            if _verify_hash(variant, h, ht):
+                        for ht, fn in hashers:
+                            if fn(variant) == h:
                                 return (variant, ht)
                 except Exception:
                     continue
-            if progress_cb and count % 10000 == 0:
-                progress_cb(count)
     return None
 
 def _builtin_attack(
@@ -446,20 +499,26 @@ def _builtin_attack(
 ) -> Optional[tuple]:
     """Try COMMON_PASSWORDS (+ rules) against the hash in-memory."""
     h = hash_value.lower().strip()
+    hashers = [(ht, _make_fast_hasher(ht)) for ht in hash_types]
+    hashers = [(ht, fn) for ht, fn in hashers if fn is not None]
+    if not hashers:
+        return None
     passwords = list(dict.fromkeys(COMMON_PASSWORDS))
+    count = 0
     for pw in passwords:
-        if stop_flag and stop_flag[0]:
+        count += 1
+        if count % 500 == 0 and stop_flag and stop_flag[0]:
             return None
-        for ht in hash_types:
-            if _verify_hash(pw, h, ht):
+        for ht, fn in hashers:
+            if fn(pw) == h:
                 return (pw, ht, "dictionary")
         if use_rules:
             for rule in RULES:
                 try:
                     variant = rule(pw)
                     if variant and variant != pw:
-                        for ht in hash_types:
-                            if _verify_hash(variant, h, ht):
+                        for ht, fn in hashers:
+                            if fn(variant) == h:
                                 return (variant, ht, "rules")
                 except Exception:
                     continue
@@ -473,42 +532,52 @@ def _bruteforce_attack(
 ) -> Optional[tuple]:
     """Brute-force passwords: digits up to 8, alpha up to 6, alphanumeric up to 5."""
     h = hash_value.lower().strip()
+    hashers = [(ht, _make_fast_hasher(ht)) for ht in hash_types]
+    hashers = [(ht, fn) for ht, fn in hashers if fn is not None]
+    if not hashers:
+        return None
+    count = 0
+    check_interval = 10000
     # Phase 1: all-digit passwords 1-8 chars
     for length in range(1, min(max_length + 1, 9)):
         for combo in itertools.product(string.digits, repeat=length):
-            if stop_flag and stop_flag[0]:
+            count += 1
+            if count % check_interval == 0 and stop_flag and stop_flag[0]:
                 return None
             word = "".join(combo)
-            for ht in hash_types:
-                if _verify_hash(word, h, ht):
+            for ht, fn in hashers:
+                if fn(word) == h:
                     return (word, ht)
     # Phase 2: lowercase alpha 1-6 chars
     for length in range(1, min(max_length + 1, 7)):
         for combo in itertools.product(string.ascii_lowercase, repeat=length):
-            if stop_flag and stop_flag[0]:
+            count += 1
+            if count % check_interval == 0 and stop_flag and stop_flag[0]:
                 return None
             word = "".join(combo)
-            for ht in hash_types:
-                if _verify_hash(word, h, ht):
+            for ht, fn in hashers:
+                if fn(word) == h:
                     return (word, ht)
     # Phase 3: uppercase alpha 1-4 chars
     for length in range(1, min(max_length + 1, 5)):
         for combo in itertools.product(string.ascii_uppercase, repeat=length):
-            if stop_flag and stop_flag[0]:
+            count += 1
+            if count % check_interval == 0 and stop_flag and stop_flag[0]:
                 return None
             word = "".join(combo)
-            for ht in hash_types:
-                if _verify_hash(word, h, ht):
+            for ht, fn in hashers:
+                if fn(word) == h:
                     return (word, ht)
     # Phase 4: alphanumeric (lower + digits) 1-5 chars
     alnum = string.ascii_lowercase + string.digits
     for length in range(1, min(max_length + 1, 6)):
         for combo in itertools.product(alnum, repeat=length):
-            if stop_flag and stop_flag[0]:
+            count += 1
+            if count % check_interval == 0 and stop_flag and stop_flag[0]:
                 return None
             word = "".join(combo)
-            for ht in hash_types:
-                if _verify_hash(word, h, ht):
+            for ht, fn in hashers:
+                if fn(word) == h:
                     return (word, ht)
     return None
 
@@ -564,3 +633,164 @@ def crack_single(
             return {"plaintext": result[0], "strategy": "bruteforce", "time_ms": round(elapsed, 3), "hash_type": result[1]}
 
     return {}
+
+
+# ──────────────────────────────────────────────
+#  Batch crack: process multiple hashes in one wordlist pass
+# ──────────────────────────────────────────────
+
+def crack_batch(
+    hash_entries: list,
+    strategies: list,
+    wordlist_path: Optional[str],
+    stop_flag: Optional[list] = None,
+    on_cracked: Optional[Callable] = None,
+):
+    """Crack multiple hashes efficiently. hash_entries = [(hash_value, hash_type, variants), ...].
+    Calls on_cracked(index, result_dict) for each cracked hash.
+    Returns dict of {index: result_dict}."""
+    results = {}
+    remaining = {}  # index -> (hash_lower, types_to_try)
+    starts = {}
+
+    for i, (hv, ht, variants) in enumerate(hash_entries):
+        h = hv.strip().lower()
+        types = variants if variants else [ht]
+        remaining[i] = (h, hv.strip(), types)
+        starts[i] = time.perf_counter()
+
+    # 1. Rainbow lookup (instant, per hash)
+    if "rainbow" in strategies:
+        found = []
+        for i, (h, raw, types) in remaining.items():
+            r = rainbow_lookup(raw)
+            if r:
+                elapsed = (time.perf_counter() - starts[i]) * 1000
+                result = {"plaintext": r[0], "strategy": "rainbow", "time_ms": round(elapsed, 3), "hash_type": r[1]}
+                results[i] = result
+                found.append(i)
+                if on_cracked:
+                    on_cracked(i, result)
+        for i in found:
+            del remaining[i]
+
+    if not remaining:
+        return results
+
+    # 2+3. Dictionary + Rules: single wordlist pass for ALL remaining hashes
+    if wordlist_path and remaining:
+        # Build target set: hash_lower -> [(index, hash_type, hasher)]
+        target_map = {}
+        for i, (h, raw, types) in remaining.items():
+            for ht in types:
+                fn = _make_fast_hasher(ht)
+                if fn:
+                    target_map.setdefault(ht, []).append((i, h, fn))
+
+        use_dict = "dictionary" in strategies
+        use_rules = "rules" in strategies
+
+        if (use_dict or use_rules) and target_map:
+            # Group by hash_type for efficient batch checking
+            type_targets = []
+            for ht, entries in target_map.items():
+                fn = entries[0][2]  # all same type share same hasher
+                hash_set = {e[1]: e[0] for e in entries}  # hash_lower -> index
+                type_targets.append((ht, fn, hash_set))
+
+            found_indices = set()
+
+            # Dictionary pass
+            if use_dict:
+                count = 0
+                with open(wordlist_path, "r", encoding="utf-8", errors="ignore") as f:
+                    for line in f:
+                        if stop_flag and stop_flag[0]:
+                            break
+                        count += 1
+                        if count % 5000 == 0 and stop_flag and stop_flag[0]:
+                            break
+                        word = line.rstrip("\n\r")
+                        if not word:
+                            continue
+                        for ht, fn, hash_set in type_targets:
+                            computed = fn(word)
+                            idx = hash_set.get(computed)
+                            if idx is not None and idx not in found_indices:
+                                elapsed = (time.perf_counter() - starts[idx]) * 1000
+                                result = {"plaintext": word, "strategy": "dictionary", "time_ms": round(elapsed, 3), "hash_type": ht}
+                                results[idx] = result
+                                found_indices.add(idx)
+                                if on_cracked:
+                                    on_cracked(idx, result)
+                                del hash_set[computed]
+                        # All found?
+                        if len(found_indices) == len(remaining):
+                            break
+
+            # Rules pass
+            if use_rules and len(found_indices) < len(remaining):
+                count = 0
+                with open(wordlist_path, "r", encoding="utf-8", errors="ignore") as f:
+                    for line in f:
+                        if stop_flag and stop_flag[0]:
+                            break
+                        count += 1
+                        if count % 2000 == 0 and stop_flag and stop_flag[0]:
+                            break
+                        base = line.rstrip("\n\r")
+                        if not base:
+                            continue
+                        for rule in RULES:
+                            try:
+                                variant = rule(base)
+                                if not variant:
+                                    continue
+                            except Exception:
+                                continue
+                            for ht, fn, hash_set in type_targets:
+                                computed = fn(variant)
+                                idx = hash_set.get(computed)
+                                if idx is not None and idx not in found_indices:
+                                    elapsed = (time.perf_counter() - starts[idx]) * 1000
+                                    result = {"plaintext": variant, "strategy": "rules", "time_ms": round(elapsed, 3), "hash_type": ht}
+                                    results[idx] = result
+                                    found_indices.add(idx)
+                                    if on_cracked:
+                                        on_cracked(idx, result)
+                                    del hash_set[computed]
+                        if len(found_indices) == len(remaining):
+                            break
+
+            for i in found_indices:
+                del remaining[i]
+
+    if not remaining:
+        return results
+
+    # 4+5. Builtin + Bruteforce: per-hash (these don't benefit from single-pass)
+    for i, (h, raw, types) in list(remaining.items()):
+        if stop_flag and stop_flag[0]:
+            break
+        use_r = any(s in strategies for s in ("rainbow", "rules"))
+        r = _builtin_attack(raw, types, use_r, stop_flag=stop_flag)
+        if r:
+            elapsed = (time.perf_counter() - starts[i]) * 1000
+            result = {"plaintext": r[0], "strategy": r[2], "time_ms": round(elapsed, 3), "hash_type": r[1]}
+            results[i] = result
+            if on_cracked:
+                on_cracked(i, result)
+            del remaining[i]
+            continue
+
+        if "bruteforce" in strategies:
+            r = _bruteforce_attack(raw, types, max_length=8, stop_flag=stop_flag)
+            if r:
+                elapsed = (time.perf_counter() - starts[i]) * 1000
+                result = {"plaintext": r[0], "strategy": "bruteforce", "time_ms": round(elapsed, 3), "hash_type": r[1]}
+                results[i] = result
+                if on_cracked:
+                    on_cracked(i, result)
+                del remaining[i]
+
+    return results

@@ -12,7 +12,7 @@ app = FastAPI(title="HashCrack API", version="1.0.0", docs_url="/docs")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
+    allow_origin_regex=r"^https?://(localhost|127\.0\.0\.1)(:\d+)?$",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -37,6 +37,17 @@ async def startup():
                 register_wordlist(default_path, DEFAULT_WORDLIST, is_custom=0)
             except Exception:
                 pass
+    # Also scan the wordlists directory for any new files
+    for fname in os.listdir(str(WORDLISTS_DIR)):
+        if fname.endswith((".txt", ".lst", ".dict")):
+            fpath = str(WORDLISTS_DIR / fname)
+            if os.path.isfile(fpath):
+                existing = get_all_wordlists()
+                if not any(w["name"] == fname for w in existing):
+                    try:
+                        register_wordlist(fpath, fname, is_custom=0)
+                    except Exception:
+                        pass
 
 @app.websocket("/ws/{task_id}")
 async def websocket_endpoint(websocket: WebSocket, task_id: str):
