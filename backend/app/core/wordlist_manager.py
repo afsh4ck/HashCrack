@@ -17,6 +17,21 @@ def _count_lines(path: str) -> int:
         pass
     return count
 
+def _estimate_lines(path: str, file_size: int) -> int:
+    """Fast line count: read real count for small files, estimate for large ones."""
+    if file_size <= 5 * 1024 * 1024:  # ≤5 MB → count exactly
+        return _count_lines(path)
+    # Estimate: sample first 64KB to get avg line length
+    try:
+        sample_size = 65536
+        with open(path, "r", encoding="utf-8", errors="ignore") as f:
+            sample = f.read(sample_size)
+        lines_in_sample = sample.count("\n") or 1
+        avg_line_len = len(sample.encode("utf-8", errors="ignore")) / lines_in_sample
+        return max(1, int(file_size / avg_line_len))
+    except Exception:
+        return max(1, file_size // 9)  # fallback: ~9 bytes per word
+
 def _detect_category(path: str, is_custom: int = 0) -> str:
     if is_custom:
         return "Custom"
@@ -44,27 +59,39 @@ def scan_directories(extra_dirs: List[str] = None) -> List[dict]:
         dirs.extend(extra_dirs)
 
     found = []
-    seen_paths = set()
+    seen_realpaths = set()
 
     for directory in dirs:
         directory = os.path.expanduser(directory)
         if not os.path.isdir(directory):
             continue
-        for root, _, files in os.walk(directory):
+        try:
+            real_dir = os.path.realpath(directory)
+        except OSError:
+            continue
+        for root, dir_names, files in os.walk(real_dir, followlinks=False):
+            # Skip hidden directories
+            dir_names[:] = [d for d in dir_names if not d.startswith('.')]
             for fname in files:
+                if fname.startswith('.'):
+                    continue
                 if not _is_wordlist(fname):
                     continue
                 full_path = os.path.join(root, fname)
-                if full_path in seen_paths:
-                    continue
-                seen_paths.add(full_path)
                 try:
-                    size = os.path.getsize(full_path)
+                    real_path = os.path.realpath(full_path)
+                except OSError:
+                    continue
+                if real_path in seen_realpaths:
+                    continue
+                seen_realpaths.add(real_path)
+                try:
+                    size = os.path.getsize(real_path)
                 except OSError:
                     size = 0
                 found.append({
                     "name": fname,
-                    "path": full_path,
+                    "path": real_path,
                     "file_size": size,
                     "is_custom": 0,
                 })
@@ -90,12 +117,12 @@ def decompress_wordlist(src_path: str) -> str:
 
 def register_wordlist(path: str, name: Optional[str] = None, is_custom: int = 1) -> dict:
     actual_path = path
-    if path.endswith((".gz", ".zip")):
+    if path.endswith((".gz", ".zip", ".bz2", ".xz")):
         actual_path = decompress_wordlist(path)
 
     file_name = name or Path(actual_path).name
     size = os.path.getsize(actual_path) if os.path.exists(actual_path) else 0
-    words = _count_lines(actual_path)
+    words = _estimate_lines(actual_path, size)
     category = _detect_category(actual_path, is_custom)
 
     db = get_db()

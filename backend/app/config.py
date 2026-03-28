@@ -13,10 +13,6 @@ RESULTS_DIR.mkdir(parents=True, exist_ok=True)
 SYSTEM_WORDLIST_DIRS = [
     "/usr/share/wordlists",
     "/usr/share/seclists",
-    "/usr/share/seclists/Passwords",
-    "/usr/share/seclists/Discovery",
-    "/usr/share/seclists/Usernames",
-    "/usr/share/seclists/Fuzzing",
     "/usr/share/metasploit-framework/data/wordlists",
     "/usr/share/dirb/wordlists",
     "/usr/share/dirbuster/wordlists",
@@ -25,6 +21,12 @@ SYSTEM_WORDLIST_DIRS = [
     "/usr/share/nmap/nselib/data",
     "/usr/share/dict",
     "/usr/share/sqlmap/data/txt",
+    "/usr/share/legion/wordlists",
+    "/usr/share/amass/wordlists",
+    "/usr/share/commix",
+    "/usr/share/set",
+    "/opt/wordlists",
+    "/opt/SecLists",
     str(Path.home() / "wordlists"),
     str(Path.home() / "Documents" / "wordlists"),
     str(WORDLISTS_DIR),
@@ -44,8 +46,8 @@ CATEGORY_PATTERNS = {
     "System":      ["/usr/share/dict/"],
 }
 
-WORDLIST_EXTENSIONS = {".txt", ".lst", ".dict"}
-WORDLIST_COMPRESSED = {".gz", ".zip"}
+WORDLIST_EXTENSIONS = {".txt", ".lst", ".dict", ".csv", ".list"}
+WORDLIST_COMPRESSED = {".gz", ".zip", ".bz2", ".xz"}
 
 MAX_UPLOAD_SIZE = 500 * 1024 * 1024  # 500 MB
 TEMP_DIR = DATA_DIR / "tmp"

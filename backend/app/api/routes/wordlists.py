@@ -27,15 +27,17 @@ async def list_categories():
 @router.post("/scan")
 async def scan_wordlists():
     found_raw = scan_directories()
-    registered = []
+    new_count = 0
     for item in found_raw:
         try:
             wl = register_wordlist(item["path"], item["name"], is_custom=0)
             if wl:
-                registered.append(_fmt(wl))
+                new_count += 1
         except Exception:
             pass
-    return {"found": len(registered), "wordlists": registered}
+    # Return ALL wordlists (including previously registered ones)
+    all_wl = get_all_wordlists()
+    return {"found": new_count, "wordlists": [_fmt(w) for w in all_wl]}
 
 @router.post("/upload")
 async def upload_wordlist(

@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
-import { Upload, RefreshCw, Trash2, Eye, FolderSearch, BookOpen, CheckCircle2, Filter, ExternalLink, Download } from 'lucide-react'
+import { Upload, RefreshCw, Trash2, Eye, FolderSearch, BookOpen, CheckCircle2, Filter, ExternalLink, Download, Search, X } from 'lucide-react'
 import useStore from '../store/useStore'
 import { t } from '../i18n'
 
-const API = 'http://localhost:8000'
+const API = ''
 
 const CATEGORY_COLORS = {
   SecLists: 'bg-cyan-400/10 text-cyan-300 border-cyan-400/20',
@@ -39,12 +39,18 @@ export default function WordlistManager() {
   const [uploading, setUploading] = useState(false)
   const [scanMsg, setScanMsg] = useState(null)
   const [preview, setPreview] = useState(null)
+  const [searchQuery, setSearchQuery] = useState('')
 
   useEffect(() => { fetchWordlists() }, [])
 
-  const filteredWordlists = selectedCategory
-    ? wordlists.filter((wl) => wl.category === selectedCategory)
-    : wordlists
+  const filteredWordlists = wordlists.filter((wl) => {
+    if (selectedCategory && wl.category !== selectedCategory) return false
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase()
+      return wl.name.toLowerCase().includes(q) || (wl.path && wl.path.toLowerCase().includes(q)) || (wl.category && wl.category.toLowerCase().includes(q))
+    }
+    return true
+  })
 
   const handleUpload = async (file) => {
     if (!file) return
@@ -95,39 +101,60 @@ export default function WordlistManager() {
         {scanMsg && <span className="text-xs text-emerald-400 animate-fade-in">{scanMsg}</span>}
       </div>
 
-      {/* Category Filters */}
-      {wordlistCategories.length > 1 && (
-        <div className="flex flex-wrap items-center gap-2">
-          <Filter size={14} className="text-white/25 shrink-0" />
-          <button
-            onClick={() => setSelectedCategory(null)}
-            className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all duration-200 ${
-              !selectedCategory
-                ? 'bg-cyan-400/10 text-cyan-300 border-cyan-400/20'
-                : 'bg-white/[0.02] text-white/30 border-white/[0.06] hover:border-white/[0.12] hover:text-white/50'
-            }`}
-          >
-            {t('wl.filterAll', language)} ({wordlists.length})
-          </button>
-          {wordlistCategories.map((cat) => {
-            const count = wordlists.filter((w) => w.category === cat).length
-            const colorCls = CATEGORY_COLORS[cat] || CATEGORY_COLORS.Other
-            return (
-              <button
-                key={cat}
-                onClick={() => setSelectedCategory(selectedCategory === cat ? null : cat)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all duration-200 ${
-                  selectedCategory === cat
-                    ? colorCls
-                    : 'bg-white/[0.02] text-white/30 border-white/[0.06] hover:border-white/[0.12] hover:text-white/50'
-                }`}
-              >
-                {cat} ({count})
-              </button>
-            )
-          })}
+      {/* Category Filters + Search */}
+      <div className="flex flex-wrap items-center gap-2">
+        {wordlistCategories.length > 1 && (
+          <>
+            <Filter size={14} className="text-white/25 shrink-0" />
+            <button
+              onClick={() => setSelectedCategory(null)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all duration-200 ${
+                !selectedCategory
+                  ? 'bg-cyan-400/10 text-cyan-300 border-cyan-400/20'
+                  : 'bg-white/[0.02] text-white/30 border-white/[0.06] hover:border-white/[0.12] hover:text-white/50'
+              }`}
+            >
+              {t('wl.filterAll', language)} ({wordlists.length})
+            </button>
+            {wordlistCategories.map((cat) => {
+              const count = wordlists.filter((w) => w.category === cat).length
+              const colorCls = CATEGORY_COLORS[cat] || CATEGORY_COLORS.Other
+              return (
+                <button
+                  key={cat}
+                  onClick={() => setSelectedCategory(selectedCategory === cat ? null : cat)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all duration-200 ${
+                    selectedCategory === cat
+                      ? colorCls
+                      : 'bg-white/[0.02] text-white/30 border-white/[0.06] hover:border-white/[0.12] hover:text-white/50'
+                  }`}
+                >
+                  {cat} ({count})
+                </button>
+              )
+            })}
+            <div className="mx-1 w-px h-5 bg-white/[0.06]" />
+          </>
+        )}
+        <div className="relative flex-1 min-w-[180px] max-w-xs">
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/20 pointer-events-none" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder={t('wl.searchPlaceholder', language)}
+            className="w-full pl-9 pr-8 py-1.5 rounded-lg text-xs font-medium border border-white/[0.06] bg-white/[0.02] text-white/70 placeholder:text-white/20 focus:border-cyan-400/30 focus:bg-cyan-400/[0.02] focus:outline-none transition-all duration-200"
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery('')}
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-white/20 hover:text-white/50 transition-colors"
+            >
+              <X size={12} />
+            </button>
+          )}
         </div>
-      )}
+      </div>
 
       {/* Upload Drop Zone */}
       <div
@@ -166,8 +193,12 @@ export default function WordlistManager() {
       {filteredWordlists.length === 0 ? (
         <div className="card text-center py-14">
           <BookOpen size={32} className="mx-auto mb-3 text-white/10" />
-          <p className="text-sm text-white/20 font-medium">{selectedCategory ? t('wl.noWordlistsInCategory', language) : t('wl.noWordlists', language)}</p>
-          <p className="text-xs mt-1.5 text-white/10">{selectedCategory ? t('wl.tryOtherCategory', language) : t('wl.noWordlistsHint', language)}</p>
+          <p className="text-sm text-white/20 font-medium">
+            {searchQuery ? t('wl.noSearchResults', language) : selectedCategory ? t('wl.noWordlistsInCategory', language) : t('wl.noWordlists', language)}
+          </p>
+          <p className="text-xs mt-1.5 text-white/10">
+            {searchQuery ? `"${searchQuery}"` : selectedCategory ? t('wl.tryOtherCategory', language) : t('wl.noWordlistsHint', language)}
+          </p>
         </div>
       ) : (
         <div className="space-y-3">

@@ -92,7 +92,8 @@ const useStore = create((set, get) => ({
     try {
       const res = await fetch(`${API}/api/wordlists/scan`, { method: 'POST' })
       const data = await res.json()
-      set({ wordlists: data.wordlists || [] })
+      const allWordlists = data.wordlists || []
+      set({ wordlists: allWordlists })
       // Refresh categories after scan
       try {
         const catRes = await fetch(`${API}/api/wordlists/categories`)
