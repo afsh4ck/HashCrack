@@ -36,7 +36,7 @@ export default function CrackingOptions() {
   ]
 
   return (
-    <div className="card space-y-5">
+    <div className={`card space-y-5 ${showWlDropdown ? 'z-[70] relative' : ''}`}>
       <div className="flex items-center gap-3">
         <div className="p-2 rounded-lg bg-violet-400/[0.08]">
           <Settings2 size={16} className="text-violet-400" />
