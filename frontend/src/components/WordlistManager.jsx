@@ -82,6 +82,9 @@ export default function WordlistManager() {
     if (data) setScanMsg(t('wl.found', language, { n: data.found }))
   }
 
+  // Hide drop zone when wordlists exist or scan was performed
+  const showDropZone = wordlists.length === 0 && !scanMsg
+
   const loadPreview = async (wl) => {
     if (preview?.id === wl.id) { setPreview(null); return }
     const res = await fetch(`${API}/api/wordlists/${wl.id}/preview?limit=20`)
@@ -103,7 +106,7 @@ export default function WordlistManager() {
           <FolderSearch size={14} />
           {loadingWordlists ? t('wl.scanning', language) : t('wl.scan', language)}
         </button>
-        <button onClick={fetchWordlists} className="btn-ghost text-sm flex items-center gap-2">
+        <button onClick={() => { useStore.setState({ wordlists: [], wordlistCategories: [] }); fetchWordlists() }} className="btn-ghost text-sm flex items-center gap-2">
           <RefreshCw size={14} /> {t('wl.refresh', language)}
         </button>
 
@@ -136,6 +139,17 @@ export default function WordlistManager() {
           )}
         </div>
       </div>
+
+      {/* Scan Warning Alert */}
+      {scanning && (
+        <div className="flex items-start gap-3 p-3.5 rounded-xl border border-amber-400/20 bg-amber-400/[0.04] animate-fade-in">
+          <AlertTriangle size={16} className="text-amber-400 shrink-0 mt-0.5" />
+          <div>
+            <p className="text-xs font-semibold text-amber-300">{t('wl.scanWarningTitle', language)}</p>
+            <p className="text-[11px] text-white/30 mt-0.5">{t('wl.scanWarningDesc', language)}</p>
+          </div>
+        </div>
+      )}
 
       {/* Category Filters + Search */}
       <div className="flex flex-wrap items-center gap-2">
@@ -207,8 +221,8 @@ export default function WordlistManager() {
         </div>
       )}
 
-      {/* Upload Drop Zone + CrackStation — visible until a scan is performed */}
-      {!scanMsg && (
+      {/* Upload Drop Zone + CrackStation — visible when no wordlists found yet */}
+      {showDropZone && (
         <>
           <div
             className="border border-dashed border-white/[0.08] rounded-2xl p-8 text-center hover:border-cyan-400/30 hover:bg-cyan-400/[0.01] transition-all duration-300 cursor-pointer group"

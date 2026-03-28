@@ -70,6 +70,10 @@ const useStore = create((set, get) => ({
   },
 
   fetchWordlists: async (retry = 0) => {
+    // Skip fetch if wordlists are already loaded (cache)
+    const { wordlists: cached, loadingWordlists: alreadyLoading } = get()
+    if (alreadyLoading) return
+    if (cached.length > 0 && retry === 0) return
     set({ loadingWordlists: true })
     try {
       const [wlRes, catRes] = await Promise.all([
