@@ -201,80 +201,74 @@ export default function WordlistManager() {
           </p>
         </div>
       ) : (
-        <div className="space-y-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           {filteredWordlists.map((wl) => (
-            <div key={wl.id} className={`card p-4 transition-all duration-200 ${
+            <div key={wl.id} className={`card p-3.5 transition-all duration-200 ${
               selectedWordlistId === wl.id
                 ? 'border-cyan-400/20 bg-cyan-400/[0.02] shadow-[0_0_30px_rgba(0,243,255,0.04)]'
                 : 'hover:border-white/[0.1]'
             }`}>
-              <div className="flex items-start gap-3.5">
+              <div className="flex items-start gap-2.5">
                 <button
                   onClick={() => setSelectedWordlistId(selectedWordlistId === wl.id ? null : wl.id)}
-                  className={`mt-1 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all duration-200 shrink-0 ${
+                  className={`mt-0.5 w-4.5 h-4.5 rounded-full border-2 flex items-center justify-center transition-all duration-200 shrink-0 ${
                     selectedWordlistId === wl.id
                       ? 'border-cyan-400 bg-cyan-400'
                       : 'border-white/15 hover:border-white/30'
                   }`}
                 >
                   {selectedWordlistId === wl.id && (
-                    <CheckCircle2 size={11} className="text-surface-900" />
+                    <CheckCircle2 size={10} className="text-surface-900" />
                   )}
                 </button>
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2.5 flex-wrap">
-                    <span className="font-semibold text-sm text-white">{wl.name}</span>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="font-semibold text-[13px] text-white truncate">{wl.name}</span>
                     {wl.category && wl.category !== 'Other' && (
-                      <span className={`text-[10px] px-2 py-0.5 rounded-md border font-medium ${CATEGORY_COLORS[wl.category] || CATEGORY_COLORS.Other}`}>
+                      <span className={`text-[9px] px-1.5 py-0.5 rounded-md border font-medium ${CATEGORY_COLORS[wl.category] || CATEGORY_COLORS.Other}`}>
                         {wl.category}
                       </span>
-                    )}
-                    {wl.is_custom ? (
-                      <span className="badge badge-purple">{t('general.custom', language)}</span>
-                    ) : (
-                      <span className="badge badge-cyan">{t('general.system', language)}</span>
                     )}
                     {selectedWordlistId === wl.id && (
                       <span className="badge badge-green">{t('general.active', language)}</span>
                     )}
                   </div>
-                  <p className="text-[11px] text-white/20 truncate mt-1">{wl.path}</p>
-                  <div className="flex items-center gap-4 mt-2 text-[11px] text-white/30">
+                  <p className="text-[10px] text-white/20 truncate mt-0.5">{wl.path}</p>
+                  <div className="flex items-center gap-3 mt-1.5 text-[10px] text-white/30">
                     <span className="font-mono">{fmtWords(wl.total_words)} {t('wl.words', language)}</span>
                     <span>{fmt(wl.file_size)}</span>
                     {wl.success_rate > 0 && (
-                      <span className="text-emerald-400 font-medium">{wl.success_rate.toFixed(1)}% {t('wl.hits', language)}</span>
+                      <span className="text-emerald-400 font-medium">{wl.success_rate.toFixed(1)}%</span>
                     )}
-                    {wl.last_used && <span>{t('wl.used', language)}: {new Date(wl.last_used).toLocaleDateString()}</span>}
                   </div>
                 </div>
-                <div className="flex items-center gap-1 shrink-0">
+                <div className="flex items-center gap-0.5 shrink-0">
                   <button
                     onClick={() => loadPreview(wl)}
-                    className="p-2 rounded-lg text-white/20 hover:text-cyan-300 hover:bg-cyan-400/[0.06] transition-all duration-200"
+                    className="p-1.5 rounded-lg text-white/20 hover:text-cyan-300 hover:bg-cyan-400/[0.06] transition-all duration-200"
                     title={t('wl.preview', language)}
                   >
-                    <Eye size={14} />
+                    <Eye size={13} />
                   </button>
                   <button
                     onClick={() => deleteWordlist(wl.id)}
-                    className="p-2 rounded-lg text-white/20 hover:text-red-400 hover:bg-red-400/[0.06] transition-all duration-200"
+                    className="p-1.5 rounded-lg text-white/20 hover:text-red-400 hover:bg-red-400/[0.06] transition-all duration-200"
                     title={t('wl.delete', language)}
                   >
-                    <Trash2 size={14} />
+                    <Trash2 size={13} />
                   </button>
                 </div>
               </div>
 
               {/* Preview */}
               {preview?.id === wl.id && (
-                <div className="mt-4 bg-white/[0.02] border border-white/[0.04] rounded-xl p-4 animate-fade-in">
-                  <p className="text-[11px] text-white/25 mb-3">
+                <div className="mt-3 bg-white/[0.02] border border-white/[0.04] rounded-xl p-3 animate-fade-in">
+                  <p className="text-[10px] text-white/25 mb-2">
                     {t('wl.previewFirst', language)} {preview.words.length} {t('wl.previewOf', language)} {preview.total.toLocaleString()} {t('wl.previewWords', language)}
                   </p>
-                  <div className="grid grid-cols-3 gap-1.5 max-h-36 overflow-y-auto">
+                  <div className="grid grid-cols-2 gap-1 max-h-28 overflow-y-auto">
                     {preview.words.map((w, i) => (
-                      <span key={i} className="text-xs text-white/50 font-mono truncate px-2 py-1 rounded bg-white/[0.02]">{w}</span>
+                      <span key={i} className="text-[11px] text-white/50 font-mono truncate px-1.5 py-0.5 rounded bg-white/[0.02]">{w}</span>
                     ))}
                   </div>
                 </div>
