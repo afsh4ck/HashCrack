@@ -86,8 +86,16 @@ const translations = {
     'wl.management': 'Gestión de Wordlists',
 
     // HashGenerator
-    'generator.title': 'Generador de Hashes',
-    'generator.subtitle': 'Genera hashes con CyberChef (enlace externo)',
+    'tab.generator': 'Generador',
+    'gen.title': 'Generador de Hashes',
+    'gen.selectAlgo': 'Algoritmo',
+    'gen.selectAlgoDesc': 'Selecciona un algoritmo para aplicar a todas las filas',
+    'gen.placeholder': 'Escribe el texto plano...',
+    'gen.copy': 'Copiar hash',
+    'gen.copyAll': 'Copiar todo',
+    'gen.clear': 'Limpiar',
+    'gen.addRow': 'Añadir otra entrada',
+    'gen.remove': 'Eliminar fila',
 
     // StatsView
     'stats.loading': 'Cargando estadísticas...',
@@ -209,8 +217,16 @@ const translations = {
     'wl.management': 'Wordlist Management',
 
     // HashGenerator
-    'generator.title': 'Hash Generator',
-    'generator.subtitle': 'Generate hashes with CyberChef (external link)',
+    'tab.generator': 'Generator',
+    'gen.title': 'Hash Generator',
+    'gen.selectAlgo': 'Algorithm',
+    'gen.selectAlgoDesc': 'Select an algorithm to apply to all rows',
+    'gen.placeholder': 'Type the plaintext...',
+    'gen.copy': 'Copy hash',
+    'gen.copyAll': 'Copy all',
+    'gen.clear': 'Clear',
+    'gen.addRow': 'Add another entry',
+    'gen.remove': 'Remove row',
 
     // StatsView
     'stats.loading': 'Loading statistics...',

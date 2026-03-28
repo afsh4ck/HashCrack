@@ -4,7 +4,7 @@ import InputArea from './components/InputArea'
 import CrackingOptions from './components/CrackingOptions'
 import ProgressPanel from './components/ProgressPanel'
 import Results from './components/Results'
-import HashGenerator from './components/HashGenerator'
+import HashGeneratorPage from './components/HashGeneratorPage'
 import WordlistManager from './components/WordlistManager'
 import StatsView from './components/StatsView'
 import useStore from './store/useStore'
@@ -37,7 +37,6 @@ export default function App() {
             <div className="space-y-6">
               <InputArea />
               <Results />
-              <HashGenerator />
             </div>
 
             {/* Right column */}
@@ -57,6 +56,11 @@ export default function App() {
             </div>
             <WordlistManager />
           </div>
+        )}
+
+        {/* Generator Tab */}
+        {activeTab === 'generator' && (
+          <HashGeneratorPage />
         )}
 
         {/* Stats Tab */}

@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.database import init_db
 from app.config import WORDLISTS_DIR
 from app.core.wordlist_manager import register_wordlist, get_all_wordlists
-from app.api.routes import crack, wordlists, statistics
+from app.api.routes import crack, wordlists, statistics, generate
 from app.api import ws_manager
 
 app = FastAPI(title="HashCrack API", version="1.0.0", docs_url="/docs")
@@ -21,6 +21,7 @@ app.add_middleware(
 app.include_router(crack.router, prefix="/api", tags=["crack"])
 app.include_router(wordlists.router, prefix="/api/wordlists", tags=["wordlists"])
 app.include_router(statistics.router, prefix="/api", tags=["statistics"])
+app.include_router(generate.router, prefix="/api/generator", tags=["generator"])
 
 DEFAULT_WORDLIST = "rockyou-50.txt"
 

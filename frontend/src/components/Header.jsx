@@ -1,4 +1,4 @@
-import { Lock, Moon, Sun, BarChart2, List, Hash, Wifi, Globe } from 'lucide-react'
+import { Lock, Moon, Sun, BarChart2, List, Hash, Wifi, Globe, FlaskConical } from 'lucide-react'
 import useStore from '../store/useStore'
 import { t } from '../i18n'
 
@@ -8,6 +8,7 @@ export default function Header() {
   const tabs = [
     { id: 'cracker', label: t('tab.cracker', language), icon: Hash },
     { id: 'wordlists', label: t('tab.wordlists', language), icon: List },
+    { id: 'generator', label: t('tab.generator', language), icon: FlaskConical },
     { id: 'stats', label: t('tab.stats', language), icon: BarChart2 },
   ]
 
