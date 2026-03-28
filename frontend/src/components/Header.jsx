@@ -1,4 +1,4 @@
-import { Shield, Moon, Sun, BarChart2, List, Hash, Wifi, Globe } from 'lucide-react'
+import { Lock, Moon, Sun, BarChart2, List, Hash, Wifi, Globe } from 'lucide-react'
 import useStore from '../store/useStore'
 import { t } from '../i18n'
 
@@ -20,7 +20,7 @@ export default function Header() {
           <div className="relative">
             <div className="absolute inset-0 bg-cyan-400/20 rounded-lg blur-md" />
             <div className="relative bg-gradient-to-br from-cyan-400 to-cyan-600 p-1.5 rounded-lg">
-              <Shield size={18} className="text-surface-900" />
+              <Lock size={18} className="text-surface-900" />
             </div>
           </div>
           <div className="flex items-baseline gap-0.5">

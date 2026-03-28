@@ -19,7 +19,7 @@ const translations = {
     'input.paste': 'Pegar',
 
     // CrackingOptions
-    'options.title': 'Estrategias de Cracking',
+    'options.title': 'Métodos de Cracking',
     'options.subtitle': 'Selecciona los métodos de ataque',
     'strategy.rainbow': 'Rainbow Tables',
     'strategy.rainbow.desc': 'Lookup instantáneo de hashes comunes',
@@ -142,7 +142,7 @@ const translations = {
     'input.paste': 'Paste',
 
     // CrackingOptions
-    'options.title': 'Cracking Strategies',
+    'options.title': 'Cracking Methods',
     'options.subtitle': 'Select attack methods',
     'strategy.rainbow': 'Rainbow Tables',
     'strategy.rainbow.desc': 'Instant lookup of common hashes',
