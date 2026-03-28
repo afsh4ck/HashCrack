@@ -103,7 +103,35 @@ export default function WordlistManager() {
         <button onClick={fetchWordlists} className="btn-ghost text-sm flex items-center gap-2">
           <RefreshCw size={14} /> {t('wl.refresh', language)}
         </button>
-        {scanMsg && <span className="text-xs text-emerald-400 animate-fade-in">{scanMsg}</span>}
+
+        {/* Spacer to push right side */}
+        <div className="flex-1" />
+
+        {/* Scan result badge + Search */}
+        {scanMsg && (
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-emerald-400/[0.06] border border-emerald-400/15 animate-fade-in">
+            <CheckCircle2 size={13} className="text-emerald-400 shrink-0" />
+            <span className="text-xs text-emerald-300 font-medium whitespace-nowrap">{scanMsg}</span>
+          </div>
+        )}
+        <div className="relative min-w-[200px] max-w-xs">
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/25 pointer-events-none" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder={t('wl.searchPlaceholder', language)}
+            className="w-full pl-9 pr-8 py-2 rounded-xl text-xs font-medium border border-white/[0.08] bg-white/[0.03] text-white/70 placeholder:text-white/25 focus:border-cyan-400/30 focus:bg-cyan-400/[0.03] focus:shadow-[0_0_12px_rgba(0,243,255,0.06)] focus:outline-none transition-all duration-200"
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery('')}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-white/25 hover:text-white/60 transition-colors"
+            >
+              <X size={13} />
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Category Filters + Search */}
@@ -138,27 +166,8 @@ export default function WordlistManager() {
                 </button>
               )
             })}
-            <div className="mx-1 w-px h-5 bg-white/[0.06]" />
           </>
         )}
-        <div className="relative flex-1 min-w-[180px] max-w-xs">
-          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/20 pointer-events-none" />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder={t('wl.searchPlaceholder', language)}
-            className="w-full pl-9 pr-8 py-1.5 rounded-lg text-xs font-medium border border-white/[0.06] bg-white/[0.02] text-white/70 placeholder:text-white/20 focus:border-cyan-400/30 focus:bg-cyan-400/[0.02] focus:outline-none transition-all duration-200"
-          />
-          {searchQuery && (
-            <button
-              onClick={() => setSearchQuery('')}
-              className="absolute right-2 top-1/2 -translate-y-1/2 text-white/20 hover:text-white/50 transition-colors"
-            >
-              <X size={12} />
-            </button>
-          )}
-        </div>
       </div>
 
       {/* Subcategory Filters (folder-level) */}
@@ -195,38 +204,41 @@ export default function WordlistManager() {
         </div>
       )}
 
-      {/* Upload Drop Zone */}
-      <div
-        className="border border-dashed border-white/[0.08] rounded-2xl p-8 text-center hover:border-cyan-400/30 hover:bg-cyan-400/[0.01] transition-all duration-300 cursor-pointer group"
-        onClick={() => fileRef.current?.click()}
-        onDragOver={(e) => e.preventDefault()}
-        onDrop={(e) => { e.preventDefault(); handleUpload(e.dataTransfer.files[0]) }}
-      >
-        <div className="w-14 h-14 rounded-2xl bg-white/[0.03] border border-white/[0.06] flex items-center justify-center mx-auto mb-4 group-hover:border-cyan-400/20 transition-colors">
-          <Upload size={22} className="text-white/15 group-hover:text-cyan-400/40 transition-colors" />
-        </div>
-        <p className="text-sm text-white/30 font-medium">{t('wl.dragHere', language)}</p>
-        <p className="text-[11px] text-white/15 mt-1.5">{t('wl.supportedFormats', language)}</p>
-      </div>
+      {/* Upload Drop Zone + CrackStation — only when no wordlists */}
+      {wordlists.length === 0 && (
+        <>
+          <div
+            className="border border-dashed border-white/[0.08] rounded-2xl p-8 text-center hover:border-cyan-400/30 hover:bg-cyan-400/[0.01] transition-all duration-300 cursor-pointer group"
+            onClick={() => fileRef.current?.click()}
+            onDragOver={(e) => e.preventDefault()}
+            onDrop={(e) => { e.preventDefault(); handleUpload(e.dataTransfer.files[0]) }}
+          >
+            <div className="w-14 h-14 rounded-2xl bg-white/[0.03] border border-white/[0.06] flex items-center justify-center mx-auto mb-4 group-hover:border-cyan-400/20 transition-colors">
+              <Upload size={22} className="text-white/15 group-hover:text-cyan-400/40 transition-colors" />
+            </div>
+            <p className="text-sm text-white/30 font-medium">{t('wl.dragHere', language)}</p>
+            <p className="text-[11px] text-white/15 mt-1.5">{t('wl.supportedFormats', language)}</p>
+          </div>
 
-      {/* CrackStation recommendation */}
-      <a
-        href="https://crackstation.net/crackstation-wordlist-password-cracking-dictionary.htm"
-        target="_blank"
-        rel="noopener noreferrer"
-        className="flex items-center gap-3 p-4 rounded-2xl border border-amber-400/15 bg-amber-400/[0.03] hover:border-amber-400/30 hover:bg-amber-400/[0.06] transition-all duration-300 group"
-      >
-        <div className="w-10 h-10 rounded-xl bg-amber-400/10 border border-amber-400/15 flex items-center justify-center shrink-0 group-hover:border-amber-400/30 transition-colors">
-          <Download size={18} className="text-amber-400/60 group-hover:text-amber-400 transition-colors" />
-        </div>
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold text-amber-300/90 group-hover:text-amber-300 transition-colors">
-            CrackStation Wordlist — 64M+ {t('wl.words', language)}
-          </p>
-          <p className="text-[11px] text-white/25 mt-0.5">{t('wl.crackstationDesc', language)}</p>
-        </div>
-        <ExternalLink size={14} className="text-white/15 group-hover:text-amber-400/60 transition-colors shrink-0" />
-      </a>
+          <a
+            href="https://crackstation.net/crackstation-wordlist-password-cracking-dictionary.htm"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-3 p-4 rounded-2xl border border-amber-400/15 bg-amber-400/[0.03] hover:border-amber-400/30 hover:bg-amber-400/[0.06] transition-all duration-300 group"
+          >
+            <div className="w-10 h-10 rounded-xl bg-amber-400/10 border border-amber-400/15 flex items-center justify-center shrink-0 group-hover:border-amber-400/30 transition-colors">
+              <Download size={18} className="text-amber-400/60 group-hover:text-amber-400 transition-colors" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-amber-300/90 group-hover:text-amber-300 transition-colors">
+                CrackStation Wordlist — 64M+ {t('wl.words', language)}
+              </p>
+              <p className="text-[11px] text-white/25 mt-0.5">{t('wl.crackstationDesc', language)}</p>
+            </div>
+            <ExternalLink size={14} className="text-white/15 group-hover:text-amber-400/60 transition-colors shrink-0" />
+          </a>
+        </>
+      )}
 
       {/* List */}
       {filteredWordlists.length === 0 ? (
