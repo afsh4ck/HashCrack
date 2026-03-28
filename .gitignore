@@ -38,3 +38,4 @@ docker-entrypoint.sh
 
 # Logs
 *.log
+.vite/
