@@ -468,12 +468,12 @@ def _builtin_attack(
 def _bruteforce_attack(
     hash_value: str,
     hash_types: list,
-    max_length: int = 5,
+    max_length: int = 8,
     stop_flag: Optional[list] = None,
 ) -> Optional[tuple]:
-    """Brute-force short passwords: digits up to max_length, then lower alpha up to 4."""
+    """Brute-force passwords: digits up to 8, alpha up to 6, alphanumeric up to 5."""
     h = hash_value.lower().strip()
-    # Phase 1: all-digit passwords 1-max_length chars
+    # Phase 1: all-digit passwords 1-8 chars
     for length in range(1, min(max_length + 1, 9)):
         for combo in itertools.product(string.digits, repeat=length):
             if stop_flag and stop_flag[0]:
@@ -482,9 +482,28 @@ def _bruteforce_attack(
             for ht in hash_types:
                 if _verify_hash(word, h, ht):
                     return (word, ht)
-    # Phase 2: lowercase alpha 1-4 chars
-    for length in range(1, min(max_length + 1, 5)):
+    # Phase 2: lowercase alpha 1-6 chars
+    for length in range(1, min(max_length + 1, 7)):
         for combo in itertools.product(string.ascii_lowercase, repeat=length):
+            if stop_flag and stop_flag[0]:
+                return None
+            word = "".join(combo)
+            for ht in hash_types:
+                if _verify_hash(word, h, ht):
+                    return (word, ht)
+    # Phase 3: uppercase alpha 1-4 chars
+    for length in range(1, min(max_length + 1, 5)):
+        for combo in itertools.product(string.ascii_uppercase, repeat=length):
+            if stop_flag and stop_flag[0]:
+                return None
+            word = "".join(combo)
+            for ht in hash_types:
+                if _verify_hash(word, h, ht):
+                    return (word, ht)
+    # Phase 4: alphanumeric (lower + digits) 1-5 chars
+    alnum = string.ascii_lowercase + string.digits
+    for length in range(1, min(max_length + 1, 6)):
+        for combo in itertools.product(alnum, repeat=length):
             if stop_flag and stop_flag[0]:
                 return None
             word = "".join(combo)
@@ -526,8 +545,8 @@ def crack_single(
             elapsed = (time.perf_counter() - start) * 1000
             return {"plaintext": result[0], "strategy": "rules", "time_ms": round(elapsed, 3), "hash_type": result[1]}
 
-    # 4. Built-in attack: COMMON_PASSWORDS + rules (fallback for rainbow/dictionary/rules)
-    if any(s in strategies for s in ("rainbow", "dictionary", "rules")):
+    # 4. Built-in attack: COMMON_PASSWORDS + rules (fallback — always runs if any strategy active)
+    if any(s in strategies for s in ("rainbow", "dictionary", "rules", "bruteforce")):
         use_rules = any(s in strategies for s in ("rainbow", "rules"))
         result = _builtin_attack(h, types_to_try, use_rules, stop_flag=stop_flag)
         if result:
@@ -537,9 +556,9 @@ def crack_single(
                 strategy_label = "rainbow"
             return {"plaintext": result[0], "strategy": strategy_label, "time_ms": round(elapsed, 3), "hash_type": result[1]}
 
-    # 5. Brute-force short passwords (digits up to 8, alpha up to 4)
+    # 5. Brute-force short passwords
     if "bruteforce" in strategies:
-        result = _bruteforce_attack(h, types_to_try, max_length=5, stop_flag=stop_flag)
+        result = _bruteforce_attack(h, types_to_try, max_length=8, stop_flag=stop_flag)
         if result:
             elapsed = (time.perf_counter() - start) * 1000
             return {"plaintext": result[0], "strategy": "bruteforce", "time_ms": round(elapsed, 3), "hash_type": result[1]}
