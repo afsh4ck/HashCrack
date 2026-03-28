@@ -62,7 +62,7 @@ const translations = {
     'results.hash': 'Hash',
     'results.type': 'Tipo',
     'results.password': 'Contraseña',
-    'results.strategy': 'Estrategia',
+    'results.strategy': 'Método',
     'results.time': 'Tiempo',
 
     // WordlistManager
@@ -206,7 +206,7 @@ const translations = {
     'results.hash': 'Hash',
     'results.type': 'Type',
     'results.password': 'Password',
-    'results.strategy': 'Strategy',
+    'results.strategy': 'Method',
     'results.time': 'Time',
 
     // WordlistManager
