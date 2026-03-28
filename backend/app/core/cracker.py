@@ -647,10 +647,12 @@ def crack_batch(
     wordlist_path: Optional[str],
     stop_flag: Optional[list] = None,
     on_cracked: Optional[Callable] = None,
+    progress: Optional[dict] = None,
 ):
     """Crack multiple hashes efficiently with multi-threaded wordlist processing.
     hash_entries = [(hash_value, hash_type, variants), ...].
     Calls on_cracked(index, result_dict) for each cracked hash.
+    progress dict is updated in-place with phase/phase_progress for live tracking.
     Returns dict of {index: result_dict}."""
     results = {}
     remaining = {}  # index -> (hash_lower, raw, types)
@@ -661,6 +663,14 @@ def crack_batch(
         types = variants if variants else [ht]
         remaining[i] = (h, hv.strip(), types)
         starts[i] = time.perf_counter()
+
+    def _update_progress(phase, phase_progress=0.0):
+        if progress is not None:
+            progress["phase"] = phase
+            progress["phase_progress"] = phase_progress
+            progress["cracked"] = len(results)
+
+    _update_progress("rainbow", 0.0)
 
     # 1. Rainbow lookup (instant, per hash)
     if "rainbow" in strategies:
@@ -676,6 +686,7 @@ def crack_batch(
                     on_cracked(i, result)
         for i in found:
             del remaining[i]
+    _update_progress("rainbow", 1.0)
 
     if not remaining:
         return results
@@ -712,13 +723,35 @@ def crack_batch(
                 found_indices = set()
                 all_found_event = threading.Event()
                 total_remaining = len(remaining)
+                total_lines = len(lines)
+                # Shared line counter for progress tracking
+                _lines_done = [0]
+                _progress_lock = threading.Lock()
+
+                def _tick_progress(local_count, phase_name):
+                    """Update shared progress counter every 1000 lines."""
+                    if local_count % 1000 == 0:
+                        with _progress_lock:
+                            _lines_done[0] += 1000
+                        _update_progress(phase_name, min(1.0, _lines_done[0] / total_lines))
+
+                def _flush_progress(local_count, phase_name):
+                    """Flush remaining line count at end of chunk."""
+                    leftover = local_count % 1000
+                    if leftover:
+                        with _progress_lock:
+                            _lines_done[0] += leftover
+                        _update_progress(phase_name, min(1.0, _lines_done[0] / total_lines))
 
                 def _process_chunk_dict(chunk):
                     """Process a chunk of wordlist lines for dictionary attack."""
                     local_results = []
+                    local_count = 0
                     for raw_line in chunk:
                         if all_found_event.is_set() or (stop_flag and stop_flag[0]):
                             break
+                        local_count += 1
+                        _tick_progress(local_count, "dictionary")
                         word = raw_line.rstrip("\n\r")
                         if not word:
                             continue
@@ -733,14 +766,18 @@ def crack_batch(
                                     del hash_set[computed]
                                     if len(found_indices) >= total_remaining:
                                         all_found_event.set()
+                    _flush_progress(local_count, "dictionary")
                     return local_results
 
                 def _process_chunk_rules(chunk):
                     """Process a chunk of wordlist lines for rules attack."""
                     local_results = []
+                    local_count = 0
                     for raw_line in chunk:
                         if all_found_event.is_set() or (stop_flag and stop_flag[0]):
                             break
+                        local_count += 1
+                        _tick_progress(local_count, "rules")
                         base = raw_line.rstrip("\n\r")
                         if not base:
                             continue
@@ -764,6 +801,7 @@ def crack_batch(
                                         del hash_set[computed]
                                         if len(found_indices) >= total_remaining:
                                             all_found_event.set()
+                    _flush_progress(local_count, "rules")
                     return local_results
 
                 # Split lines into chunks for parallel processing
@@ -773,6 +811,8 @@ def crack_batch(
 
                 # Dictionary pass (multi-threaded)
                 if use_dict:
+                    _update_progress("dictionary", 0.0)
+                    _lines_done[0] = 0
                     with ThreadPoolExecutor(max_workers=n_workers) as pool:
                         futures = [pool.submit(_process_chunk_dict, c) for c in chunks]
                         for fut in futures:
@@ -784,6 +824,8 @@ def crack_batch(
 
                 # Rules pass (multi-threaded) — only for still-unfound hashes
                 if use_rules and len(found_indices) < total_remaining:
+                    _update_progress("rules", 0.0)
+                    _lines_done[0] = 0
                     all_found_event.clear()
                     with ThreadPoolExecutor(max_workers=n_workers) as pool:
                         futures = [pool.submit(_process_chunk_rules, c) for c in chunks]
@@ -802,9 +844,11 @@ def crack_batch(
         return results
 
     # 4+5. Builtin + Bruteforce: per-hash (these don't benefit from single-pass)
-    for i, (h, raw, types) in list(remaining.items()):
+    remaining_list = list(remaining.items())
+    for ci, (i, (h, raw, types)) in enumerate(remaining_list):
         if stop_flag and stop_flag[0]:
             break
+        _update_progress("builtin", ci / max(1, len(remaining_list)))
         use_r = any(s in strategies for s in ("rainbow", "rules"))
         r = _builtin_attack(raw, types, use_r, stop_flag=stop_flag)
         if r:
@@ -817,6 +861,7 @@ def crack_batch(
             continue
 
         if "bruteforce" in strategies:
+            _update_progress("bruteforce", ci / max(1, len(remaining_list)))
             r = _bruteforce_attack(raw, types, max_length=8, stop_flag=stop_flag)
             if r:
                 elapsed = (time.perf_counter() - starts[i]) * 1000
@@ -826,4 +871,5 @@ def crack_batch(
                     on_cracked(i, result)
                 del remaining[i]
 
+    _update_progress("done", 1.0)
     return results

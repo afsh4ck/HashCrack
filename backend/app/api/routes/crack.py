@@ -31,7 +31,6 @@ async def _run_task(task_id: str, hashes: List[str], strategies: list,
                     wordlist_path: Optional[str], wordlist_name: Optional[str]):
     db = get_db()
     total = len(hashes)
-    processed = 0
     cracked = 0
     results = []
     stop_flag = _stop_flags.setdefault(task_id, [False])
@@ -45,6 +44,7 @@ async def _run_task(task_id: str, hashes: List[str], strategies: list,
     await ws_manager.broadcast(task_id, {
         "status": "running", "total": total,
         "processed": 0, "cracked": 0, "results": [],
+        "phase": "", "phase_progress": 0,
     })
 
     loop = asyncio.get_event_loop()
@@ -61,22 +61,52 @@ async def _run_task(task_id: str, hashes: List[str], strategies: list,
             variants = ["md5"]
         hash_entries.append((h, hash_type, variants))
 
-    # Use batch cracking for efficiency (single wordlist pass for all hashes)
+    # Shared progress dict updated by crack_batch threads
+    progress_info = {"phase": "", "phase_progress": 0.0, "cracked": 0}
     batch_results = {}
 
     def on_cracked(idx, result):
         batch_results[idx] = result
 
+    # Run crack_batch in executor (non-blocking)
+    crack_future = loop.run_in_executor(
+        None,
+        crack_batch,
+        hash_entries, strategies, wordlist_path, stop_flag, on_cracked, progress_info,
+    )
+
+    # Poll progress and broadcast until cracking is done
+    while not crack_future.done():
+        await asyncio.sleep(0.35)
+        current_cracked = len(batch_results)
+        current_results = []
+        for idx, cr in list(batch_results.items()):
+            h_val = hashes[idx] if idx < len(hashes) else ""
+            actual_type = cr.get("hash_type", "")
+            current_results.append({
+                "hash": h_val, "hash_type": actual_type,
+                "plaintext": cr["plaintext"], "strategy": cr["strategy"],
+                "time_ms": cr["time_ms"],
+            })
+
+        await ws_manager.broadcast(task_id, {
+            "status": "running",
+            "total": total,
+            "processed": current_cracked,
+            "cracked": current_cracked,
+            "phase": progress_info.get("phase", ""),
+            "phase_progress": round(progress_info.get("phase_progress", 0), 4),
+            "results": current_results[-50:],
+        })
+
+    # Get final result
     try:
-        batch_results = await loop.run_in_executor(
-            None,
-            crack_batch,
-            hash_entries, strategies, wordlist_path, stop_flag, on_cracked,
-        )
+        batch_results = crack_future.result()
     except Exception:
         batch_results = {}
 
-    # Process results and broadcast
+    # Process results and save to DB
+    processed = 0
     for idx, (h, hash_type, variants) in enumerate(hash_entries):
         if stop_flag[0]:
             break
@@ -103,15 +133,6 @@ async def _run_task(task_id: str, hashes: List[str], strategies: list,
         )
         db.commit()
 
-        if total <= 100 or processed % 10 == 0 or crack_result:
-            await ws_manager.broadcast(task_id, {
-                "status": "running",
-                "total": total,
-                "processed": processed,
-                "cracked": cracked,
-                "results": results[-50:],
-            })
-
     if wordlist_name:
         update_wordlist_stats(wordlist_name, cracked)
 
@@ -127,6 +148,8 @@ async def _run_task(task_id: str, hashes: List[str], strategies: list,
         "total": total,
         "processed": processed,
         "cracked": cracked,
+        "phase": "done",
+        "phase_progress": 1.0,
         "results": results,
     })
 

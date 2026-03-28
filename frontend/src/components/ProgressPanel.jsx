@@ -17,12 +17,12 @@ export default function ProgressPanel() {
   const running = taskStatus?.status === 'running'
   const done = taskStatus?.status === 'completed' || taskStatus?.status === 'stopped'
 
-  const pct = taskStatus?.total
-    ? Math.round((taskStatus.processed / taskStatus.total) * 100)
-    : 0
+  // Use phase_progress (0-1 from backend) for real-time progress bar
+  const phaseProgress = taskStatus?.phase_progress ?? 0
+  const pct = done ? 100 : Math.round(phaseProgress * 100)
 
-  const rate = taskStatus?.cracked && taskStatus?.processed
-    ? ((taskStatus.cracked / taskStatus.processed) * 100).toFixed(1)
+  const rate = taskStatus?.cracked && taskStatus?.total
+    ? ((taskStatus.cracked / taskStatus.total) * 100).toFixed(1)
     : '0.0'
 
   return (
@@ -60,14 +60,16 @@ export default function ProgressPanel() {
                 done ? 'text-emerald-400' :
                 'text-white/40'
               }`}>
-                {taskStatus.status === 'completed' ? t('progress.completed', language) :
-                 taskStatus.status === 'running' ? t('progress.running', language) :
-                 taskStatus.status === 'stopped' ? t('progress.stopped', language) :
+                {running ? t('progress.running', language) :
+                 done ? (taskStatus.status === 'completed' ? t('progress.completed', language) : t('progress.stopped', language)) :
                  taskStatus.status}
+              {running && taskStatus.phase && taskStatus.phase !== 'done' && (
+                <span className="ml-1.5 text-white/30">— {t(`progress.phase.${taskStatus.phase}`, language)}</span>
+              )}
               </span>
             </div>
             <span className="text-[11px] text-white/25 font-mono">
-              {taskStatus.processed?.toLocaleString()} / {taskStatus.total?.toLocaleString()}
+              {taskStatus.cracked?.toLocaleString()} / {taskStatus.total?.toLocaleString()}
             </span>
           </div>
 

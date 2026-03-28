@@ -45,6 +45,11 @@ const translations = {
     'progress.rate': 'Tasa',
     'progress.progress': 'Progreso',
     'progress.lastFound': 'Últimos encontrados',
+    'progress.phase.rainbow': 'Rainbow',
+    'progress.phase.dictionary': 'Diccionario',
+    'progress.phase.rules': 'Reglas',
+    'progress.phase.builtin': 'Contraseñas comunes',
+    'progress.phase.bruteforce': 'Fuerza bruta',
 
     // Results
     'results.title': 'Resultados',
@@ -184,6 +189,11 @@ const translations = {
     'progress.rate': 'Rate',
     'progress.progress': 'Progress',
     'progress.lastFound': 'Last found',
+    'progress.phase.rainbow': 'Rainbow',
+    'progress.phase.dictionary': 'Dictionary',
+    'progress.phase.rules': 'Rules',
+    'progress.phase.builtin': 'Common passwords',
+    'progress.phase.bruteforce': 'Brute force',
 
     // Results
     'results.title': 'Results',
