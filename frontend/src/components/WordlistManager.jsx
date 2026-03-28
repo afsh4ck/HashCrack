@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Upload, RefreshCw, Trash2, Eye, FolderSearch, BookOpen, CheckCircle2, Filter, ExternalLink, Download, Search, X, FolderOpen, AlertTriangle } from 'lucide-react'
+import { Upload, RefreshCw, Eye, FolderSearch, BookOpen, CheckCircle2, Filter, ExternalLink, Download, Search, X, FolderOpen, AlertTriangle } from 'lucide-react'
 import useStore from '../store/useStore'
 import { t } from '../i18n'
 
@@ -34,7 +34,7 @@ function fmtWords(n) {
 }
 
 export default function WordlistManager() {
-  const { wordlists, loadingWordlists, fetchWordlists, scanWordlists, deleteWordlist, selectedWordlistId, setSelectedWordlistId, language, wordlistCategories, selectedCategory, setSelectedCategory, wordlistSubcategories, selectedSubcategory, setSelectedSubcategory, fetchSubcategories } = useStore()
+  const { wordlists, loadingWordlists, fetchWordlists, scanWordlists, selectedWordlistId, setSelectedWordlistId, language, wordlistCategories, selectedCategory, setSelectedCategory, wordlistSubcategories, selectedSubcategory, setSelectedSubcategory, fetchSubcategories } = useStore()
   const fileRef = useRef()
   const [uploading, setUploading] = useState(false)
   const [scanMsg, setScanMsg] = useState(null)
@@ -82,8 +82,8 @@ export default function WordlistManager() {
     if (data) setScanMsg(t('wl.found', language, { n: data.found }))
   }
 
-  // Hide drop zone when wordlists exist or scan was performed
-  const showDropZone = wordlists.length === 0 && !scanMsg
+  // Hide drop zone only after a scan has been performed
+  const showDropZone = !scanMsg
 
   const loadPreview = async (wl) => {
     if (preview?.id === wl.id) { setPreview(null); return }
@@ -271,24 +271,27 @@ export default function WordlistManager() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           {filteredWordlists.map((wl) => (
-            <div key={wl.id} className={`card p-3.5 transition-all duration-200 ${
-              selectedWordlistId === wl.id
-                ? 'border-cyan-400/20 bg-cyan-400/[0.02] shadow-[0_0_30px_rgba(0,243,255,0.04)]'
-                : 'hover:border-white/[0.1]'
-            }`}>
-              <div className="flex items-start gap-2.5">
-                <button
-                  onClick={() => setSelectedWordlistId(selectedWordlistId === wl.id ? null : wl.id)}
-                  className={`mt-0.5 w-4.5 h-4.5 rounded-full border-2 flex items-center justify-center transition-all duration-200 shrink-0 ${
+            <div
+              key={wl.id}
+              onClick={() => setSelectedWordlistId(selectedWordlistId === wl.id ? null : wl.id)}
+              className={`card p-3.5 transition-all duration-200 cursor-pointer ${
+                selectedWordlistId === wl.id
+                  ? 'border-cyan-400/20 bg-cyan-400/[0.02] shadow-[0_0_30px_rgba(0,243,255,0.04)]'
+                  : 'hover:border-white/[0.1]'
+              }`}
+            >
+              <div className="flex items-start gap-3">
+                <div
+                  className={`mt-0.5 w-5 h-5 min-w-[20px] min-h-[20px] rounded-full border-2 flex items-center justify-center transition-all duration-200 shrink-0 ${
                     selectedWordlistId === wl.id
                       ? 'border-cyan-400 bg-cyan-400'
-                      : 'border-white/15 hover:border-white/30'
+                      : 'border-white/15'
                   }`}
                 >
                   {selectedWordlistId === wl.id && (
-                    <CheckCircle2 size={10} className="text-surface-900" />
+                    <CheckCircle2 size={12} className="text-surface-900" />
                   )}
-                </button>
+                </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="font-semibold text-[13px] text-white truncate">{wl.name}</span>
@@ -310,22 +313,13 @@ export default function WordlistManager() {
                     )}
                   </div>
                 </div>
-                <div className="flex items-center gap-0.5 shrink-0">
-                  <button
-                    onClick={() => loadPreview(wl)}
-                    className="p-1.5 rounded-lg text-white/20 hover:text-cyan-300 hover:bg-cyan-400/[0.06] transition-all duration-200"
-                    title={t('wl.preview', language)}
-                  >
-                    <Eye size={13} />
-                  </button>
-                  <button
-                    onClick={() => deleteWordlist(wl.id)}
-                    className="p-1.5 rounded-lg text-white/20 hover:text-red-400 hover:bg-red-400/[0.06] transition-all duration-200"
-                    title={t('wl.delete', language)}
-                  >
-                    <Trash2 size={13} />
-                  </button>
-                </div>
+                <button
+                  onClick={(e) => { e.stopPropagation(); loadPreview(wl) }}
+                  className="p-1.5 rounded-lg text-white/20 hover:text-cyan-300 hover:bg-cyan-400/[0.06] transition-all duration-200 shrink-0"
+                  title={t('wl.preview', language)}
+                >
+                  <Eye size={14} />
+                </button>
               </div>
 
               {/* Preview */}
