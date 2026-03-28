@@ -204,8 +204,8 @@ export default function WordlistManager() {
         </div>
       )}
 
-      {/* Upload Drop Zone + CrackStation — only when no wordlists */}
-      {wordlists.length === 0 && (
+      {/* Upload Drop Zone + CrackStation — visible until a scan is performed */}
+      {!scanMsg && (
         <>
           <div
             className="border border-dashed border-white/[0.08] rounded-2xl p-8 text-center hover:border-cyan-400/30 hover:bg-cyan-400/[0.01] transition-all duration-300 cursor-pointer group"
