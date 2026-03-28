@@ -54,7 +54,7 @@ const useStore = create((set, get) => ({
   stats: null,
 
   // ─── Actions ───────────────────────────────────────────────
-  fetchWordlists: async () => {
+  fetchWordlists: async (retry = 0) => {
     set({ loadingWordlists: true })
     try {
       const [wlRes, catRes] = await Promise.all([
@@ -67,13 +67,21 @@ const useStore = create((set, get) => ({
       // Auto-select default wordlist if none selected yet
       const { selectedWordlistId } = get()
       if (!selectedWordlistId && data.length > 0) {
-        const defaultWl = data.find((w) => w.name === DEFAULT_WORDLIST_NAME)
-        if (defaultWl) {
-          set({ selectedWordlistId: defaultWl.id })
-        }
+        const defaultWl = data.find((w) => w.name.toLowerCase().includes('rockyou-50'))
+          || data.find((w) => w.name.toLowerCase().includes('rockyou'))
+          || data[0]
+        if (defaultWl) set({ selectedWordlistId: defaultWl.id })
+      }
+      // If backend returned empty list but we know wordlists should exist, retry once
+      if (data.length === 0 && retry < 2) {
+        setTimeout(() => get().fetchWordlists(retry + 1), 1500)
       }
     } catch (e) {
       console.error('fetchWordlists', e)
+      // Retry on network error (backend may not be ready yet)
+      if (retry < 2) {
+        setTimeout(() => get().fetchWordlists(retry + 1), 2000)
+      }
     } finally {
       set({ loadingWordlists: false })
     }
