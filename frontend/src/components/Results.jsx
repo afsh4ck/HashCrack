@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { Copy, Download, CheckCircle2, Table2 } from 'lucide-react'
+import { useState, useRef, useEffect } from 'react'
+import { Copy, Download, CheckCircle2, Table2, ChevronDown } from 'lucide-react'
 import useStore from '../store/useStore'
 import { t } from '../i18n'
 
@@ -11,6 +11,14 @@ const STRATEGY_BADGE = {
 export default function Results() {
   const { results, exportResults, taskStatus, language } = useStore()
   const [copied, setCopied] = useState(false)
+  const [showExport, setShowExport] = useState(false)
+  const exportRef = useRef(null)
+
+  useEffect(() => {
+    const handler = (e) => { if (exportRef.current && !exportRef.current.contains(e.target)) setShowExport(false) }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
 
   const copyAll = () => {
     const text = results.map((r) => `${r.hash}:${r.plaintext}`).join('\n')
@@ -41,21 +49,25 @@ export default function Results() {
               {copied ? <CheckCircle2 size={12} className="text-emerald-400" /> : <Copy size={12} />}
               {copied ? t('results.copied', language) : t('results.copy', language)}
             </button>
-            <div className="relative group">
-              <button className="btn-ghost text-xs flex items-center gap-2">
-                <Download size={12} /> {t('results.export', language)}
+            <div ref={exportRef} className="relative">
+              <button onClick={() => setShowExport(!showExport)} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-all cursor-pointer ${showExport ? 'bg-cyan-400/10 border-cyan-400/40 text-cyan-300' : 'bg-white/[0.04] border-white/10 text-white/50 hover:border-white/20 hover:text-white/70'}`}>
+                <Download size={12} />
+                {t('results.export', language)}
+                <ChevronDown size={12} className={`transition-transform ${showExport ? 'rotate-180' : ''}`} />
               </button>
-              <div className="absolute right-0 top-full mt-1.5 z-[60] dropdown-menu rounded-xl shadow-2xl shadow-black/50 hidden group-hover:block min-w-[130px] animate-slide-in overflow-hidden">
-                {['json', 'csv', 'txt', 'potfile'].map((fmt) => (
-                  <button
-                    key={fmt}
-                    onClick={() => exportResults(fmt)}
-                    className="w-full text-left px-4 py-2.5 text-xs text-white/50 hover:text-cyan-300 hover:bg-white/[0.04] uppercase font-medium transition-colors"
-                  >
-                    .{fmt}
-                  </button>
-                ))}
-              </div>
+              {showExport && (
+                <div className="absolute right-0 top-full mt-1.5 z-[60] dropdown-menu rounded-xl shadow-2xl shadow-black/50 min-w-[130px] animate-slide-in overflow-hidden py-1">
+                  {['json', 'csv', 'txt', 'potfile'].map((fmt) => (
+                    <button
+                      key={fmt}
+                      onClick={() => { exportResults(fmt); setShowExport(false) }}
+                      className="w-full text-left px-3.5 py-2 text-xs text-white/50 hover:text-cyan-300 hover:bg-white/[0.04] uppercase font-medium transition-colors"
+                    >
+                      .{fmt}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         )}
