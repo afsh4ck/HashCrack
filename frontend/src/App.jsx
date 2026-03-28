@@ -69,6 +69,20 @@ export default function App() {
           </div>
         )}
       </main>
+
+      <footer className="relative text-center py-6 mt-8 border-t border-white/[0.04]">
+        <p className="text-xs text-white/25">
+          Developed by{' '}
+          <a
+            href="https://www.instagram.com/afsh4ck/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-cyan-400/60 hover:text-cyan-300 transition-colors"
+          >
+            afsh4ck
+          </a>
+        </p>
+      </footer>
     </div>
   )
 }
