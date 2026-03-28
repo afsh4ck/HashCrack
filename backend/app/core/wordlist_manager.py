@@ -32,6 +32,10 @@ def _estimate_lines(path: str, file_size: int) -> int:
     except Exception:
         return max(1, file_size // 9)  # fallback: ~9 bytes per word
 
+def _estimate_lines_fast(file_size: int) -> int:
+    """Instant estimation from file size only (no disk read). ~10 bytes per word avg."""
+    return max(1, file_size // 10)
+
 def _detect_category(path: str, is_custom: int = 0) -> str:
     if is_custom:
         return "Custom"
@@ -158,6 +162,43 @@ def register_wordlist(path: str, name: Optional[str] = None, is_custom: int = 1)
     except Exception as e:
         db.rollback()
         raise e
+
+def bulk_register_wordlists(items: List[dict]) -> int:
+    """Register many wordlists in a single DB transaction. Skips already-known files."""
+    if not items:
+        return 0
+    db = get_db()
+    # Build set of existing (path, file_size) to skip unchanged files
+    existing = set()
+    for row in db.execute("SELECT path, file_size FROM wordlists").fetchall():
+        existing.add((row["path"], row["file_size"]))
+
+    rows_to_insert = []
+    for item in items:
+        p = item["path"]
+        size = item["file_size"]
+        if (p, size) in existing:
+            continue  # already registered with same size
+        name = item["name"]
+        cat = _detect_category(p, 0)
+        subcat = _detect_subcategory(p, cat)
+        words = _estimate_lines_fast(size)
+        rows_to_insert.append((name, p, words, size, 0, cat, subcat))
+
+    if not rows_to_insert:
+        return 0
+    try:
+        db.executemany(
+            """INSERT OR REPLACE INTO wordlists
+               (name, path, total_words, file_size, is_custom, category, subcategory)
+               VALUES (?, ?, ?, ?, ?, ?, ?)""",
+            rows_to_insert,
+        )
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        raise e
+    return len(rows_to_insert)
 
 def get_all_wordlists() -> List[dict]:
     db = get_db()

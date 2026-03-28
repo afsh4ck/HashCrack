@@ -4,11 +4,12 @@ import aiofiles
 from typing import Optional, List
 from fastapi import APIRouter, UploadFile, File, HTTPException, Form
 from app.core.wordlist_manager import (
-    scan_directories, register_wordlist, get_all_wordlists,
-    get_wordlist_by_id, delete_wordlist, preview_wordlist,
-    get_wordlist_categories, get_wordlist_subcategories,
+    scan_directories, register_wordlist, bulk_register_wordlists,
+    get_all_wordlists, get_wordlist_by_id, delete_wordlist,
+    preview_wordlist, get_wordlist_categories, get_wordlist_subcategories,
 )
 from app.config import TEMP_DIR
+import asyncio
 
 router = APIRouter()
 
@@ -30,17 +31,10 @@ async def list_subcategories(category: str):
 
 @router.post("/scan")
 async def scan_wordlists():
-    found_raw = scan_directories()
-    new_count = 0
-    for item in found_raw:
-        try:
-            wl = register_wordlist(item["path"], item["name"], is_custom=0)
-            if wl:
-                new_count += 1
-        except Exception:
-            pass
-    # Return ALL wordlists (including previously registered ones)
-    all_wl = get_all_wordlists()
+    loop = asyncio.get_event_loop()
+    found_raw = await loop.run_in_executor(None, scan_directories)
+    new_count = await loop.run_in_executor(None, bulk_register_wordlists, found_raw)
+    all_wl = await loop.run_in_executor(None, get_all_wordlists)
     return {"found": new_count, "wordlists": [_fmt(w) for w in all_wl]}
 
 @router.post("/upload")
