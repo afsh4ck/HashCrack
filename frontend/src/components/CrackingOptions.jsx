@@ -12,7 +12,7 @@ const colorMap = {
 
 export default function CrackingOptions() {
   const {
-    strategies, toggleStrategy,
+    strategies, toggleStrategy, setStrategies,
     wordlists, selectedWordlistId, setSelectedWordlistId,
     loadingWordlists, language,
   } = useStore()
@@ -41,12 +41,40 @@ export default function CrackingOptions() {
         <div className="p-2 rounded-lg bg-violet-400/[0.08]">
           <Settings2 size={16} className="text-violet-400" />
         </div>
-        <div>
+        <div className="flex-1">
           <h2 className="text-sm font-semibold text-white tracking-tight">
             {t('options.title', language)}
           </h2>
           <p className="text-[11px] text-white/30 mt-0.5">{t('options.subtitle', language)}</p>
         </div>
+        <button
+          onClick={() => {
+            const allIds = STRATEGY_OPTIONS.map(s => s.id)
+            const allActive = allIds.every(id => strategies.includes(id))
+            setStrategies(allActive ? [] : allIds)
+          }}
+          className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border transition-all duration-200 cursor-pointer
+            border-violet-400/20 bg-violet-400/[0.06] hover:bg-violet-400/[0.12]"
+          title={STRATEGY_OPTIONS.every(s => strategies.includes(s.id)) ? (language === 'es' ? 'Desmarcar todo' : 'Uncheck all') : (language === 'es' ? 'Marcar todo' : 'Check all')}
+        >
+          <div className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-all duration-200 ${
+            STRATEGY_OPTIONS.every(s => strategies.includes(s.id))
+              ? 'border-violet-400/40 bg-violet-400/20'
+              : STRATEGY_OPTIONS.some(s => strategies.includes(s.id))
+                ? 'border-violet-400/30 bg-violet-400/10'
+                : 'border-white/15'
+          }`}>
+            {STRATEGY_OPTIONS.every(s => strategies.includes(s.id)) && <Check size={10} className="text-violet-300" />}
+            {!STRATEGY_OPTIONS.every(s => strategies.includes(s.id)) && STRATEGY_OPTIONS.some(s => strategies.includes(s.id)) && (
+              <div className="w-2 h-0.5 bg-violet-400/60 rounded-full" />
+            )}
+          </div>
+          <span className="text-[11px] font-medium text-violet-300/80">
+            {STRATEGY_OPTIONS.every(s => strategies.includes(s.id))
+              ? (language === 'es' ? 'Todo' : 'All')
+              : (language === 'es' ? 'Todo' : 'All')}
+          </span>
+        </button>
       </div>
 
       <div className="space-y-2">

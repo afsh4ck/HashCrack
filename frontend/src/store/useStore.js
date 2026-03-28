@@ -20,7 +20,7 @@ const useStore = create((set, get) => ({
   setDetectedHashes: (d) => set({ detectedHashes: d }),
 
   // Options
-  strategies: ['rainbow', 'dictionary', 'rules'],
+  strategies: ['rainbow', 'dictionary', 'rules', 'bruteforce'],
   selectedWordlistId: null,
   timeout: 300,
   maxLength: 12,
@@ -30,6 +30,7 @@ const useStore = create((set, get) => ({
         ? state.strategies.filter((x) => x !== s)
         : [...state.strategies, s],
     })),
+  setStrategies: (list) => set({ strategies: list }),
   setSelectedWordlistId: (id) => set({ selectedWordlistId: id }),
 
   // Task / Progress
