@@ -1,4 +1,4 @@
-import { Lock, Moon, Sun, BarChart2, List, Hash, Wifi, Globe, FlaskConical } from 'lucide-react'
+import { Lock, Moon, Sun, ChartBar, List, Hash, WifiHigh, Globe, Flask } from '@phosphor-icons/react'
 import useStore from '../store/useStore'
 import { t } from '../i18n'
 
@@ -8,8 +8,8 @@ export default function Header() {
   const tabs = [
     { id: 'cracker', label: t('tab.cracker', language), icon: Hash },
     { id: 'wordlists', label: t('tab.wordlists', language), icon: List },
-    { id: 'generator', label: t('tab.generator', language), icon: FlaskConical },
-    { id: 'stats', label: t('tab.stats', language), icon: BarChart2 },
+    { id: 'generator', label: t('tab.generator', language), icon: Flask },
+    { id: 'stats', label: t('tab.stats', language), icon: ChartBar },
   ]
 
   return (
@@ -32,7 +32,7 @@ export default function Header() {
               CRACK
             </span>
           </div>
-          <span className="badge badge-cyan text-[9px] tracking-widest uppercase ml-1">v1.0</span>
+          <span className="badge badge-cyan text-[9px] tracking-widest uppercase ml-1">v2.0</span>
         </div>
 
         {/* Tabs */}
@@ -77,7 +77,7 @@ export default function Header() {
 
         {/* Status */}
         <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-emerald-500/[0.06] border border-emerald-500/10">
-          <Wifi size={12} className="text-emerald-400" />
+          <WifiHigh size={12} className="text-emerald-400" />
           <span className="text-[11px] font-medium text-emerald-400/80 tracking-wide">{t('status.online', language)}</span>
         </div>
       </div>

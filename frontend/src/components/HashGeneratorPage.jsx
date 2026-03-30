@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { FlaskConical, Copy, CheckCircle2, Download, ChevronDown, RotateCcw } from 'lucide-react'
+import { Flask, Copy, CheckCircle, DownloadSimple, CaretDown, ArrowCounterClockwise } from '@phosphor-icons/react'
 import useStore from '../store/useStore'
 import { t } from '../i18n'
 import { computeHash, isClientSupported } from '../hashUtils'
@@ -135,14 +135,14 @@ export default function HashGeneratorPage() {
           {hashes && (
             <>
               <button onClick={copyOutput} className="btn-ghost text-xs flex items-center gap-1.5">
-                {copied ? <CheckCircle2 size={12} className="text-emerald-400" /> : <Copy size={12} />}
+                {copied ? <CheckCircle size={12} className="text-emerald-400" /> : <Copy size={12} />}
                 {copied ? t('results.copied', language) : t('gen.copyAll', language)}
               </button>
               <ExportDropdown language={language} onExport={exportOutput} />
             </>
           )}
           <button onClick={clearAll} className="btn-ghost text-xs flex items-center gap-1.5">
-            <RotateCcw size={12} /> {t('gen.clear', language)}
+            <ArrowCounterClockwise size={12} /> {t('gen.clear', language)}
           </button>
         </div>
       </div>
@@ -151,7 +151,7 @@ export default function HashGeneratorPage() {
       <div className="card">
         <div className="flex items-center gap-3 mb-4">
           <div className="p-2 rounded-lg bg-violet-400/[0.08]">
-            <FlaskConical size={16} className="text-violet-400" />
+            <Flask size={16} className="text-violet-400" />
           </div>
           <div>
             <h2 className="text-sm font-semibold text-white tracking-tight">{t('gen.selectAlgo', language)}</h2>
@@ -209,7 +209,7 @@ export default function HashGeneratorPage() {
               className="p-1 rounded-md text-white/20 hover:text-cyan-300 transition-colors disabled:opacity-20 disabled:cursor-not-allowed"
               title={t('gen.copy', language)}
             >
-              {copied ? <CheckCircle2 size={13} className="text-emerald-400" /> : <Copy size={13} />}
+              {copied ? <CheckCircle size={13} className="text-emerald-400" /> : <Copy size={13} />}
             </button>
           </div>
           <textarea
@@ -244,9 +244,9 @@ function ExportDropdown({ language, onExport }) {
           open ? 'bg-cyan-400/10 border-cyan-400/40 text-cyan-300' : 'bg-white/[0.04] border-white/10 text-white/50 hover:border-white/20 hover:text-white/70'
         }`}
       >
-        <Download size={12} />
+        <DownloadSimple size={12} />
         {t('results.export', language)}
-        <ChevronDown size={12} className={`transition-transform ${open ? 'rotate-180' : ''}`} />
+        <CaretDown size={12} className={`transition-transform ${open ? 'rotate-180' : ''}`} />
       </button>
       {open && (
         <div className="absolute right-0 top-full mt-1.5 z-[60] dropdown-menu rounded-xl shadow-2xl shadow-black/50 min-w-[130px] animate-slide-in overflow-hidden py-1">

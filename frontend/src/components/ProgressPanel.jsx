@@ -1,4 +1,4 @@
-import { Zap, Square, CheckCircle2, Activity } from 'lucide-react'
+import { Lightning, Stop, CheckCircle, Pulse } from '@phosphor-icons/react'
 import useStore from '../store/useStore'
 import { t } from '../i18n'
 
@@ -38,9 +38,9 @@ export default function ProgressPanel() {
         } disabled:opacity-20 disabled:cursor-not-allowed disabled:shadow-none disabled:animate-none`}
       >
         {running ? (
-          <><Square size={14} /> {t('progress.stop', language)}</>
+          <><Stop size={14} /> {t('progress.stop', language)}</>
         ) : (
-          <><Zap size={14} /> {t('progress.start', language)}</>
+          <><Lightning size={14} /> {t('progress.start', language)}</>
         )}
       </button>
 
@@ -104,13 +104,13 @@ export default function ProgressPanel() {
           {results.length > 0 && (
             <div className="space-y-1">
               <div className="flex items-center gap-2 mb-2">
-                <Activity size={12} className="text-white/20" />
+                <Pulse size={12} className="text-white/20" />
                 <p className="text-[11px] text-white/25 uppercase tracking-widest font-semibold">{t('progress.lastFound', language)}</p>
               </div>
               <div className="max-h-52 overflow-y-auto space-y-0.5">
                 {[...results].reverse().slice(0, 20).map((r, i) => (
                   <div key={i} className="hash-row flex items-center gap-2 py-1.5 px-2.5 text-xs animate-fade-in">
-                    <CheckCircle2 size={12} className="text-emerald-400 shrink-0" />
+                    <CheckCircle size={12} className="text-emerald-400 shrink-0" />
                     <span className="text-white/30 font-mono truncate max-w-[100px]">{r.hash.slice(0, 12)}…</span>
                     <span className="text-emerald-300 font-semibold">{r.plaintext}</span>
                     <span className={`badge ${STRATEGY_BADGE[r.strategy] || 'badge-cyan'} ml-auto text-[10px]`}>{r.strategy}</span>

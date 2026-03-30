@@ -5,7 +5,7 @@ cd /app/backend
 
 echo ""
 echo " =========================================="
-echo "  HashCrack v1.0 — Docker"
+echo "  HashCrack v2.0 — Docker"
 echo " =========================================="
 echo ""
 

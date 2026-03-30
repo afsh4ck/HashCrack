@@ -4,6 +4,7 @@ import time
 import itertools
 import string
 import os
+import re
 import threading
 from concurrent.futures import ThreadPoolExecutor
 from typing import Optional, Callable
@@ -332,6 +333,270 @@ def _verify_hash(word: str, hash_value: str, hash_type: str) -> bool:
     return computed.lower() == hv
 
 # ──────────────────────────────────────────────
+#  NTLMv1 / NTLMv2 (Net-NTLM) challenge-response
+# ──────────────────────────────────────────────
+
+_NTLMV2_RE = re.compile(
+    r'^([^:]+)::([^:]*):([a-f0-9]+):([a-f0-9]{32}):([a-f0-9]+)$', re.IGNORECASE
+)
+_NTLMV1_RE = re.compile(
+    r'^([^:]+)::([^:]*):([a-f0-9]{48}):([a-f0-9]{48}):([a-f0-9]{16})$', re.IGNORECASE
+)
+
+def _parse_ntlmv2(hash_string: str) -> Optional[dict]:
+    """Parse NetNTLMv2: user::domain:server_challenge:nt_proof_str:blob"""
+    m = _NTLMV2_RE.match(hash_string.strip())
+    if not m:
+        return None
+    return {
+        'username': m.group(1),
+        'domain': m.group(2),
+        'server_challenge': m.group(3),
+        'nt_proof_str': m.group(4).lower(),
+        'blob': m.group(5),
+    }
+
+def _parse_ntlmv1(hash_string: str) -> Optional[dict]:
+    """Parse NetNTLMv1: user::domain:lm_response:ntlm_response:server_challenge"""
+    m = _NTLMV1_RE.match(hash_string.strip())
+    if not m:
+        return None
+    return {
+        'username': m.group(1),
+        'domain': m.group(2),
+        'lm_response': m.group(3),
+        'ntlm_response': m.group(4).lower(),
+        'server_challenge': m.group(5),
+    }
+
+def _make_ntlmv2_verifier(parsed: dict):
+    """Return a (word -> bool) closure for NTLMv2 verification."""
+    identity = (parsed['username'].upper() + parsed['domain']).encode('utf-16-le')
+    server_challenge = bytes.fromhex(parsed['server_challenge'])
+    target_proof = parsed['nt_proof_str']
+    blob = bytes.fromhex(parsed['blob'])
+    challenge_blob = server_challenge + blob
+
+    def verify(word: str) -> bool:
+        nt_hash = hashlib.new('md4', word.encode('utf-16-le')).digest()
+        ntlmv2_hash = hmac.new(nt_hash, identity, 'md5').digest()
+        computed = hmac.new(ntlmv2_hash, challenge_blob, 'md5').hexdigest()
+        return computed == target_proof
+    return verify
+
+def _des_expand_key(key_7: bytes) -> bytes:
+    """Expand a 7-byte key to an 8-byte DES key with parity bits."""
+    b = int.from_bytes(key_7, 'big')
+    expanded = []
+    for i in range(8):
+        shift = 56 - i * 7
+        val = ((b >> shift) & 0x7F) << 1
+        expanded.append(val)
+    return bytes(expanded)
+
+def _ntlmv1_response(nt_hash: bytes, server_challenge: bytes) -> str:
+    """Compute the 24-byte NTLM response for NTLMv1."""
+    from Crypto.Cipher import DES
+    # Pad NT hash to 21 bytes
+    padded = nt_hash.ljust(21, b'\x00')
+    result = b''
+    for i in range(3):
+        key_7 = padded[i * 7:(i + 1) * 7]
+        des_key = _des_expand_key(key_7)
+        cipher = DES.new(des_key, DES.MODE_ECB)
+        result += cipher.encrypt(server_challenge)
+    return result.hex()
+
+def _make_ntlmv1_verifier(parsed: dict):
+    """Return a (word -> bool) closure for NTLMv1 verification."""
+    target_response = parsed['ntlm_response']
+    server_challenge = bytes.fromhex(parsed['server_challenge'])
+
+    def verify(word: str) -> bool:
+        nt_hash = hashlib.new('md4', word.encode('utf-16-le')).digest()
+        computed = _ntlmv1_response(nt_hash, server_challenge)
+        return computed == target_response
+    return verify
+
+def _is_netntlm(hash_type: str) -> bool:
+    """Check if the hash type is a challenge-response (NTLMv1/v2)."""
+    return hash_type in ('ntlmv1', 'ntlmv2')
+
+def _make_netntlm_verifier(hash_string: str, hash_type: str):
+    """Parse and return a verifier for NTLMv1/v2 challenge-response hashes."""
+    if hash_type == 'ntlmv2':
+        parsed = _parse_ntlmv2(hash_string)
+        if parsed:
+            return _make_ntlmv2_verifier(parsed)
+    elif hash_type == 'ntlmv1':
+        parsed = _parse_ntlmv1(hash_string)
+        if parsed:
+            return _make_ntlmv1_verifier(parsed)
+    return None
+
+def _netntlm_attack(
+    hash_string: str,
+    hash_type: str,
+    wordlist_path: Optional[str],
+    strategies: list,
+    stop_flag: Optional[list] = None,
+    progress_cb: Optional[Callable] = None,
+) -> Optional[dict]:
+    """Crack a single NTLMv1/v2 hash through all strategies.
+    progress_cb(phase, fraction) is called periodically with 0.0-1.0 overall progress."""
+    verifier = _make_netntlm_verifier(hash_string, hash_type)
+    if not verifier:
+        return None
+
+    start = time.perf_counter()
+    check_interval = 2000
+
+    # Count wordlist lines once for weight estimation and phase progress
+    wl_lines = 0
+    if wordlist_path:
+        try:
+            with open(wordlist_path, "rb") as f:
+                wl_lines = sum(1 for _ in f)
+        except Exception:
+            pass
+
+    # Estimate work per phase (candidate count) for proportional weights
+    n_common = len(set(COMMON_PASSWORDS))
+    n_rules = len(RULES)
+    use_rules_global = any(s in strategies for s in ('rainbow', 'rules'))
+    est_bruteforce = 111_111_111 + 12_356_630  # digits 1-8 + alpha 1-5
+
+    phase_work = {}
+    if any(s in strategies for s in ('rainbow', 'dictionary', 'rules', 'bruteforce')):
+        phase_work['rainbow'] = n_common * (1 + n_rules) if use_rules_global else n_common
+    if wordlist_path and 'dictionary' in strategies:
+        phase_work['dictionary'] = max(1, wl_lines)
+    if wordlist_path and 'rules' in strategies:
+        phase_work['rules'] = max(1, wl_lines * n_rules)
+    if 'bruteforce' in strategies:
+        phase_work['bruteforce'] = est_bruteforce
+
+    total_work = sum(phase_work.values()) or 1
+    pw = {k: v / total_work for k, v in phase_work.items()}
+    _base = [0.0]
+
+    def _report(phase_name, fraction):
+        if progress_cb:
+            w = pw.get(phase_name, 0)
+            overall = _base[0] + w * min(1.0, fraction)
+            progress_cb(phase_name, min(1.0, overall))
+
+    def _finish_phase(phase_name):
+        _base[0] += pw.get(phase_name, 0)
+
+    # 1. Common passwords (rainbow-equivalent)
+    if any(s in strategies for s in ('rainbow', 'dictionary', 'rules', 'bruteforce')):
+        passwords = list(dict.fromkeys(COMMON_PASSWORDS))
+        total_pw = len(passwords)
+        count = 0
+        for pw_word in passwords:
+            count += 1
+            if count % 500 == 0:
+                if stop_flag and stop_flag[0]:
+                    return None
+                _report('rainbow', count / total_pw)
+            if verifier(pw_word):
+                elapsed = (time.perf_counter() - start) * 1000
+                return {"plaintext": pw_word, "strategy": "rainbow", "time_ms": round(elapsed, 3), "hash_type": hash_type}
+            if use_rules_global:
+                for rule in RULES:
+                    try:
+                        variant = rule(pw_word)
+                        if variant and variant != pw_word and verifier(variant):
+                            elapsed = (time.perf_counter() - start) * 1000
+                            return {"plaintext": variant, "strategy": "rules", "time_ms": round(elapsed, 3), "hash_type": hash_type}
+                    except Exception:
+                        continue
+        _report('rainbow', 1.0)
+        _finish_phase('rainbow')
+
+    # 2. Dictionary with wordlist file
+    if wordlist_path and 'dictionary' in strategies:
+        count = 0
+        total_lines = max(1, wl_lines)
+        try:
+            with open(wordlist_path, "r", encoding="utf-8", errors="ignore") as f:
+                for line in f:
+                    count += 1
+                    if count % check_interval == 0:
+                        if stop_flag and stop_flag[0]:
+                            return None
+                        _report('dictionary', count / total_lines)
+                    word = line.rstrip("\n\r")
+                    if not word:
+                        continue
+                    if verifier(word):
+                        elapsed = (time.perf_counter() - start) * 1000
+                        return {"plaintext": word, "strategy": "dictionary", "time_ms": round(elapsed, 3), "hash_type": hash_type}
+        except Exception:
+            pass
+        _report('dictionary', 1.0)
+        _finish_phase('dictionary')
+
+    # 3. Rules with wordlist file
+    if wordlist_path and 'rules' in strategies:
+        count = 0
+        total_lines = max(1, wl_lines)
+        try:
+            with open(wordlist_path, "r", encoding="utf-8", errors="ignore") as f:
+                for line in f:
+                    count += 1
+                    if count % check_interval == 0:
+                        if stop_flag and stop_flag[0]:
+                            return None
+                        _report('rules', count / total_lines)
+                    base = line.rstrip("\n\r")
+                    if not base:
+                        continue
+                    for rule in RULES:
+                        try:
+                            variant = rule(base)
+                            if variant and verifier(variant):
+                                elapsed = (time.perf_counter() - start) * 1000
+                                return {"plaintext": variant, "strategy": "rules", "time_ms": round(elapsed, 3), "hash_type": hash_type}
+                        except Exception:
+                            continue
+        except Exception:
+            pass
+        _report('rules', 1.0)
+        _finish_phase('rules')
+
+    # 4. Brute-force
+    if 'bruteforce' in strategies:
+        count = 0
+        # Digits up to 8
+        for length in range(1, 9):
+            for combo in itertools.product(string.digits, repeat=length):
+                count += 1
+                if count % 10000 == 0:
+                    if stop_flag and stop_flag[0]:
+                        return None
+                    _report('bruteforce', count / est_bruteforce)
+                word = "".join(combo)
+                if verifier(word):
+                    elapsed = (time.perf_counter() - start) * 1000
+                    return {"plaintext": word, "strategy": "bruteforce", "time_ms": round(elapsed, 3), "hash_type": hash_type}
+        # Lowercase alpha up to 5
+        for length in range(1, 6):
+            for combo in itertools.product(string.ascii_lowercase, repeat=length):
+                count += 1
+                if count % 10000 == 0:
+                    if stop_flag and stop_flag[0]:
+                        return None
+                    _report('bruteforce', count / est_bruteforce)
+                word = "".join(combo)
+                if verifier(word):
+                    elapsed = (time.perf_counter() - start) * 1000
+                    return {"plaintext": word, "strategy": "bruteforce", "time_ms": round(elapsed, 3), "hash_type": hash_type}
+
+    return None
+
+# ──────────────────────────────────────────────
 #  Rule transformations
 # ──────────────────────────────────────────────
 
@@ -595,6 +860,11 @@ def crack_single(
     h = hash_value.strip()
     types_to_try = variants if variants else [hash_type]
 
+    # Handle NTLMv1/v2 challenge-response hashes via dedicated pipeline
+    if _is_netntlm(hash_type):
+        result = _netntlm_attack(h, hash_type, wordlist_path, strategies, stop_flag)
+        return result if result else {}
+
     # 1. Rainbow lookup (instant)
     if "rainbow" in strategies:
         result = rainbow_lookup(h)
@@ -664,13 +934,88 @@ def crack_batch(
         remaining[i] = (h, hv.strip(), types)
         starts[i] = time.perf_counter()
 
-    def _update_progress(phase, phase_progress=0.0):
+    # Identify netntlm hashes upfront (needed for weight calculation)
+    netntlm_indices = [i for i, (h, raw, types) in remaining.items() if any(_is_netntlm(t) for t in types)]
+    n_regular = len(remaining) - len(netntlm_indices)
+
+    # Count wordlist lines once for work estimation
+    wl_lines = 0
+    if wordlist_path:
+        try:
+            with open(wordlist_path, "rb") as f:
+                wl_lines = sum(1 for _ in f)
+        except Exception:
+            pass
+
+    # Estimate work per phase (candidate count) for proportional progress weights
+    n_common = len(set(COMMON_PASSWORDS))
+    n_rules = len(RULES)
+    est_bruteforce_single = 111_111_111 + 12_356_630 + 456_976 + 60_466_176  # digits8+alpha5+ALPHA4+alnum5
+
+    phase_work = {}
+    if netntlm_indices:
+        # NetNTLM pipeline work: common_passwords×rules + wordlist + wordlist×rules + bruteforce
+        ntlm_work_per_hash = n_common * (1 + n_rules) + wl_lines + wl_lines * n_rules + est_bruteforce_single
+        phase_work["netntlm"] = len(netntlm_indices) * ntlm_work_per_hash
+    if "rainbow" in strategies and n_regular > 0:
+        phase_work["rainbow"] = 1  # instant table lookup
+    if wordlist_path and "dictionary" in strategies and n_regular > 0:
+        phase_work["dictionary"] = max(1, wl_lines)
+    if wordlist_path and "rules" in strategies and n_regular > 0:
+        phase_work["rules"] = max(1, wl_lines * n_rules)
+    if any(s in strategies for s in ("rainbow", "dictionary", "rules", "bruteforce")) and n_regular > 0:
+        phase_work["builtin"] = max(1, n_common * (1 + n_rules) * n_regular)
+    if "bruteforce" in strategies and n_regular > 0:
+        phase_work["bruteforce"] = est_bruteforce_single * max(1, n_regular)
+
+    total_work = sum(phase_work.values()) or 1
+    phase_weights = {k: v / total_work for k, v in phase_work.items()}
+    _base = [0.0]  # cumulative completed phase weight
+
+    def _update_progress(phase, phase_frac=0.0):
         if progress is not None:
-            progress["phase"] = phase
-            progress["phase_progress"] = phase_progress
+            if phase == "done":
+                progress["phase"] = "done"
+                progress["phase_progress"] = 1.0
+            else:
+                w = phase_weights.get(phase, 0)
+                overall = _base[0] + w * min(1.0, phase_frac)
+                progress["phase"] = phase
+                progress["phase_progress"] = min(1.0, overall)
             progress["cracked"] = len(results)
 
+    def _finish_phase(phase):
+        _base[0] += phase_weights.get(phase, 0)
+
     _update_progress("rainbow", 0.0)
+
+    # 0. Handle NTLMv1/v2 challenge-response hashes via dedicated pipeline
+    if netntlm_indices:
+        _update_progress("netntlm", 0.0)
+        n_total = len(netntlm_indices)
+        for ci, i in enumerate(netntlm_indices):
+            if stop_flag and stop_flag[0]:
+                break
+            h, raw, types = remaining[i]
+            ht = next((t for t in types if _is_netntlm(t)), types[0])
+
+            def _ntlm_progress_cb(phase_name, fraction, _ci=ci):
+                # Map per-hash progress into global progress: each hash gets 1/n_total slice
+                overall = (_ci + fraction) / n_total
+                _update_progress("netntlm", overall)
+
+            r = _netntlm_attack(raw, ht, wordlist_path, strategies, stop_flag, progress_cb=_ntlm_progress_cb)
+            if r:
+                results[i] = r
+                if on_cracked:
+                    on_cracked(i, r)
+            del remaining[i]
+        _finish_phase("netntlm")
+        _update_progress("netntlm", 0.0)  # flush final value
+
+    if not remaining:
+        _update_progress("done", 1.0)
+        return results
 
     # 1. Rainbow lookup (instant, per hash)
     if "rainbow" in strategies:
@@ -686,9 +1031,10 @@ def crack_batch(
                     on_cracked(i, result)
         for i in found:
             del remaining[i]
-    _update_progress("rainbow", 1.0)
+    _finish_phase("rainbow")
 
     if not remaining:
+        _update_progress("done", 1.0)
         return results
 
     # 2+3. Dictionary + Rules: multi-threaded wordlist processing
@@ -821,6 +1167,7 @@ def crack_batch(
                                 results[idx] = result
                                 if on_cracked:
                                     on_cracked(idx, result)
+                    _finish_phase("dictionary")
 
                 # Rules pass (multi-threaded) — only for still-unfound hashes
                 if use_rules and len(found_indices) < total_remaining:
@@ -835,20 +1182,35 @@ def crack_batch(
                                 results[idx] = result
                                 if on_cracked:
                                     on_cracked(idx, result)
+                    _finish_phase("rules")
 
             for i in found_indices:
                 if i in remaining:
                     del remaining[i]
 
     if not remaining:
+        _update_progress("done", 1.0)
         return results
 
     # 4+5. Builtin + Bruteforce: per-hash (these don't benefit from single-pass)
     remaining_list = list(remaining.items())
+    n_rem = max(1, len(remaining_list))
+    # Combined weight for both per-hash phases
+    _combined_w = phase_weights.get("builtin", 0) + phase_weights.get("bruteforce", 0)
+
     for ci, (i, (h, raw, types)) in enumerate(remaining_list):
         if stop_flag and stop_flag[0]:
             break
-        _update_progress("builtin", ci / max(1, len(remaining_list)))
+
+        # Report per-hash progress across combined builtin+bruteforce weight
+        def _per_hash_progress(phase_name, frac_within_hash):
+            if progress is not None:
+                overall = _base[0] + _combined_w * (ci + frac_within_hash) / n_rem
+                progress["phase"] = phase_name
+                progress["phase_progress"] = min(1.0, overall)
+                progress["cracked"] = len(results)
+
+        _per_hash_progress("builtin", 0.0)
         use_r = any(s in strategies for s in ("rainbow", "rules"))
         r = _builtin_attack(raw, types, use_r, stop_flag=stop_flag)
         if r:
@@ -861,7 +1223,7 @@ def crack_batch(
             continue
 
         if "bruteforce" in strategies:
-            _update_progress("bruteforce", ci / max(1, len(remaining_list)))
+            _per_hash_progress("bruteforce", 0.3)  # builtin ~30% of per-hash work
             r = _bruteforce_attack(raw, types, max_length=8, stop_flag=stop_flag)
             if r:
                 elapsed = (time.perf_counter() - starts[i]) * 1000

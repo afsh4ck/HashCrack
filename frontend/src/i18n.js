@@ -50,6 +50,7 @@ const translations = {
     'progress.phase.rules': 'Reglas',
     'progress.phase.builtin': 'Contraseñas comunes',
     'progress.phase.bruteforce': 'Fuerza bruta',
+    'progress.phase.netntlm': 'Net-NTLM',
 
     // Results
     'results.title': 'Resultados',
@@ -194,6 +195,7 @@ const translations = {
     'progress.phase.rules': 'Rules',
     'progress.phase.builtin': 'Common passwords',
     'progress.phase.bruteforce': 'Brute force',
+    'progress.phase.netntlm': 'Net-NTLM',
 
     // Results
     'results.title': 'Results',

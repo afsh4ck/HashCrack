@@ -7,7 +7,7 @@ FRONTEND="$ROOT/frontend"
 
 echo ""
 echo " =========================================="
-echo "  HashCrack v1.0 - Local Hash Cracker"
+echo "  HashCrack v2.0 - Local Hash Cracker"
 echo " =========================================="
 echo ""
 

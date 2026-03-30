@@ -8,7 +8,7 @@ from app.core.wordlist_manager import register_wordlist, get_all_wordlists
 from app.api.routes import crack, wordlists, statistics, generate
 from app.api import ws_manager
 
-app = FastAPI(title="HashCrack API", version="1.0.0", docs_url="/docs")
+app = FastAPI(title="HashCrack API", version="2.0.0", docs_url="/docs")
 
 app.add_middleware(
     CORSMiddleware,

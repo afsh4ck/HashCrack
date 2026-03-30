@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react'
-import { Upload, Clipboard, Trash2, AlertCircle, CheckCircle, FileText } from 'lucide-react'
+import { UploadSimple, Clipboard, Trash, WarningCircle, CheckCircle, FileText } from '@phosphor-icons/react'
 import useStore from '../store/useStore'
 import { t } from '../i18n'
 
@@ -56,7 +56,7 @@ export default function InputArea() {
             className="p-2 rounded-lg text-white/20 hover:text-red-400 hover:bg-red-400/[0.06] transition-all duration-200"
             title={t('input.clear', language)}
           >
-            <Trash2 size={14} />
+            <Trash size={14} />
           </button>
         </div>
       </div>
@@ -82,7 +82,7 @@ export default function InputArea() {
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
             <div className="text-center text-white/15 mt-8">
               <div className="w-12 h-12 rounded-2xl bg-white/[0.03] border border-white/[0.06] flex items-center justify-center mx-auto mb-3">
-                <Upload size={20} />
+                <UploadSimple size={20} />
               </div>
               <p className="text-xs font-medium">{t('input.dragText', language)}</p>
               <p className="text-[11px] mt-1.5 text-white/10">{t('input.supportedTypes', language)}</p>
@@ -95,7 +95,7 @@ export default function InputArea() {
         <input ref={fileRef} type="file" className="hidden" accept=".txt,.lst,.hash"
           onChange={(e) => e.target.files[0] && handleFile(e.target.files[0])} />
         <button onClick={() => fileRef.current?.click()} className="btn-ghost text-xs flex items-center gap-2">
-          <Upload size={13} /> {t('input.loadFile', language)}
+          <UploadSimple size={13} /> {t('input.loadFile', language)}
         </button>
         <button
           onClick={async () => {
@@ -119,7 +119,7 @@ export default function InputArea() {
                 {d.confidence >= 0.8 ? (
                   <CheckCircle size={10} />
                 ) : (
-                  <AlertCircle size={10} />
+                  <WarningCircle size={10} />
                 )}
                 {d.variants && d.variants.length > 1
                   ? d.variants.join(' / ')

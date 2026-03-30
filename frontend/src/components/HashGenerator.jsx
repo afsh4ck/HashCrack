@@ -1,4 +1,4 @@
-import { ExternalLink, FlaskConical } from 'lucide-react'
+import { ArrowSquareOut, Flask } from '@phosphor-icons/react'
 import useStore from '../store/useStore'
 import { t } from '../i18n'
 
@@ -35,7 +35,7 @@ export default function HashGenerator() {
     <div className="card space-y-4">
       <div className="flex items-center gap-3">
         <div className="p-2 rounded-lg bg-amber-400/[0.08]">
-          <FlaskConical size={16} className="text-amber-400" />
+          <Flask size={16} className="text-amber-400" />
         </div>
         <div>
           <h2 className="text-sm font-semibold text-white tracking-tight">
@@ -55,7 +55,7 @@ export default function HashGenerator() {
             className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-[11px] font-semibold tracking-wide transition-all duration-200 ${COLOR_CLASSES[color]}`}
           >
             {name}
-            <ExternalLink size={10} className="opacity-40" />
+            <ArrowSquareOut size={10} className="opacity-40" />
           </a>
         ))}
       </div>

@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { Copy, Download, CheckCircle2, Table2, ChevronDown } from 'lucide-react'
+import { Copy, DownloadSimple, CheckCircle, Table, CaretDown } from '@phosphor-icons/react'
 import useStore from '../store/useStore'
 import { t } from '../i18n'
 
@@ -34,7 +34,7 @@ export default function Results() {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="p-2 rounded-lg bg-emerald-400/[0.08]">
-            <Table2 size={16} className="text-emerald-400" />
+            <Table size={16} className="text-emerald-400" />
           </div>
           <div className="flex items-center gap-2.5">
             <h2 className="text-sm font-semibold text-white tracking-tight">{t('results.title', language)}</h2>
@@ -46,14 +46,14 @@ export default function Results() {
         {results.length > 0 && (
           <div className="flex items-center gap-2">
             <button onClick={copyAll} className="btn-ghost text-xs flex items-center gap-2">
-              {copied ? <CheckCircle2 size={12} className="text-emerald-400" /> : <Copy size={12} />}
+              {copied ? <CheckCircle size={12} className="text-emerald-400" /> : <Copy size={12} />}
               {copied ? t('results.copied', language) : t('results.copy', language)}
             </button>
             <div ref={exportRef} className="relative">
               <button onClick={() => setShowExport(!showExport)} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-all cursor-pointer ${showExport ? 'bg-cyan-400/10 border-cyan-400/40 text-cyan-300' : 'bg-white/[0.04] border-white/10 text-white/50 hover:border-white/20 hover:text-white/70'}`}>
-                <Download size={12} />
+                <DownloadSimple size={12} />
                 {t('results.export', language)}
-                <ChevronDown size={12} className={`transition-transform ${showExport ? 'rotate-180' : ''}`} />
+                <CaretDown size={12} className={`transition-transform ${showExport ? 'rotate-180' : ''}`} />
               </button>
               {showExport && (
                 <div className="absolute right-0 top-full mt-1.5 z-[60] dropdown-menu rounded-xl shadow-2xl shadow-black/50 min-w-[130px] animate-slide-in overflow-hidden py-1">

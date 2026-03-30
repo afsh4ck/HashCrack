@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react'
-import { TrendingUp, Hash, Zap, Award, Loader2, ChevronDown, ChevronUp, Check, Trash2 } from 'lucide-react'
+import { TrendUp, Hash, Lightning, Trophy, CircleNotch, CaretDown, CaretUp, Check, Trash } from '@phosphor-icons/react'
 import useStore from '../store/useStore'
 import { t } from '../i18n'
 
@@ -27,7 +27,7 @@ function FilterDropdown({ value, onChange, options, placeholder, icon: Icon }) {
       >
         {Icon && <Icon size={11} />}
         <span className="truncate max-w-[120px]">{label}</span>
-        <ChevronDown size={11} className={`transition-transform duration-200 ${open ? 'rotate-180' : ''}`} />
+        <CaretDown size={11} className={`transition-transform duration-200 ${open ? 'rotate-180' : ''}`} />
       </button>
       {open && (
         <div className="absolute right-0 top-full mt-1.5 z-[60] dropdown-menu rounded-xl shadow-2xl shadow-black/50 min-w-[180px] animate-slide-in overflow-hidden py-1">
@@ -86,7 +86,7 @@ export default function StatsView() {
 
   if (!stats) return (
     <div className="flex items-center justify-center py-24 text-white/15 gap-3">
-      <Loader2 size={20} className="animate-spin" />
+      <CircleNotch size={20} className="animate-spin" />
       <p className="text-sm">{t('stats.loading', language)}</p>
     </div>
   )
@@ -126,7 +126,7 @@ export default function StatsView() {
               </div>
             ) : (
               <button onClick={() => setConfirmClear(true)} className="btn-ghost text-[11px] flex items-center gap-1.5 px-3 py-1.5 rounded-lg">
-                <Trash2 size={12} /> {t('stats.clear', language)}
+                <Trash size={12} /> {t('stats.clear', language)}
               </button>
             )}
           </div>
@@ -137,11 +137,11 @@ export default function StatsView() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <StatCard label={t('stats.totalCracked', language)} value={stats.total_cracked.toLocaleString()} icon={Hash}
           gradient="bg-gradient-to-br from-cyan-500 to-cyan-700" />
-        <StatCard label={t('stats.tasksCompleted', language)} value={stats.tasks_completed} icon={Zap}
+        <StatCard label={t('stats.tasksCompleted', language)} value={stats.tasks_completed} icon={Lightning}
           gradient="bg-gradient-to-br from-emerald-500 to-emerald-700" />
-        <StatCard label={t('stats.tasksTotal', language)} value={stats.tasks_total} icon={TrendingUp}
+        <StatCard label={t('stats.tasksTotal', language)} value={stats.tasks_total} icon={TrendUp}
           gradient="bg-gradient-to-br from-amber-500 to-amber-700" />
-        <StatCard label={t('stats.topWordlists', language)} value={stats.top_wordlists.length} icon={Award}
+        <StatCard label={t('stats.topWordlists', language)} value={stats.top_wordlists.length} icon={Trophy}
           gradient="bg-gradient-to-br from-violet-500 to-violet-700" />
       </div>
 
@@ -255,7 +255,7 @@ export default function StatsView() {
                 onChange={setFilterStrategy}
                 options={strategyTypes.map(s => ({ value: s, label: s }))}
                 placeholder={t('stats.filterStrategy', language)}
-                icon={Zap}
+                icon={Lightning}
               />
             </div>
           </div>
@@ -272,7 +272,7 @@ export default function StatsView() {
                       className="text-white/20 hover:text-white/50 transition-colors shrink-0"
                       title={expandedHash === i ? t('stats.hideFull', language) : t('stats.showFull', language)}
                     >
-                      {expandedHash === i ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+                      {expandedHash === i ? <CaretUp size={12} /> : <CaretDown size={12} />}
                     </button>
                     <span className="text-white/20 font-mono truncate max-w-[140px]">
                       {r.hash.slice(0, 18)}…

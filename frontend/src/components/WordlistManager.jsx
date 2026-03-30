@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Upload, RefreshCw, Eye, FolderSearch, BookOpen, CheckCircle2, Filter, ExternalLink, Download, Search, X, FolderOpen, AlertTriangle } from 'lucide-react'
+import { UploadSimple, ArrowsClockwise, Eye, Folder, BookOpen, CheckCircle, Funnel, ArrowSquareOut, DownloadSimple, MagnifyingGlass, X, FolderOpen, Warning } from '@phosphor-icons/react'
 import useStore from '../store/useStore'
 import { t } from '../i18n'
 
@@ -99,15 +99,15 @@ export default function WordlistManager() {
         <input ref={fileRef} type="file" className="hidden" accept=".txt,.gz,.zip,.lst,.dict"
           onChange={(e) => e.target.files[0] && handleUpload(e.target.files[0])} />
         <button onClick={() => fileRef.current?.click()} className="btn-primary text-sm flex items-center gap-2.5" disabled={uploading}>
-          <Upload size={14} />
+          <UploadSimple size={14} />
           {uploading ? t('wl.uploading', language) : t('wl.upload', language)}
         </button>
         <button onClick={handleScan} className="btn-ghost text-sm flex items-center gap-2" disabled={loadingWordlists}>
-          <FolderSearch size={14} />
+          <Folder size={14} />
           {loadingWordlists ? t('wl.scanning', language) : t('wl.scan', language)}
         </button>
         <button onClick={() => { useStore.setState({ wordlists: [], wordlistCategories: [] }); fetchWordlists() }} className="btn-ghost text-sm flex items-center gap-2">
-          <RefreshCw size={14} /> {t('wl.refresh', language)}
+          <ArrowsClockwise size={14} /> {t('wl.refresh', language)}
         </button>
 
         {/* Spacer to push right side */}
@@ -116,12 +116,12 @@ export default function WordlistManager() {
         {/* Scan result badge + Search */}
         {scanMsg && (
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-emerald-400/[0.06] border border-emerald-400/15 animate-fade-in">
-            <CheckCircle2 size={13} className="text-emerald-400 shrink-0" />
+            <CheckCircle size={13} className="text-emerald-400 shrink-0" />
             <span className="text-xs text-emerald-300 font-medium whitespace-nowrap">{scanMsg}</span>
           </div>
         )}
         <div className="relative min-w-[200px] max-w-xs">
-          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/25 pointer-events-none" />
+          <MagnifyingGlass size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/25 pointer-events-none" />
           <input
             type="text"
             value={searchQuery}
@@ -143,7 +143,7 @@ export default function WordlistManager() {
       {/* Scan Warning Alert */}
       {scanning && (
         <div className="flex items-start gap-3 p-3.5 rounded-xl border border-amber-400/20 bg-amber-400/[0.04] animate-fade-in">
-          <AlertTriangle size={16} className="text-amber-400 shrink-0 mt-0.5" />
+          <Warning size={16} className="text-amber-400 shrink-0 mt-0.5" />
           <div>
             <p className="text-xs font-semibold text-amber-300">{t('wl.scanWarningTitle', language)}</p>
             <p className="text-[11px] text-white/30 mt-0.5">{t('wl.scanWarningDesc', language)}</p>
@@ -155,7 +155,7 @@ export default function WordlistManager() {
       <div className="flex flex-wrap items-center gap-2">
         {wordlistCategories.length > 1 && (
           <>
-            <Filter size={14} className="text-white/25 shrink-0" />
+            <Funnel size={14} className="text-white/25 shrink-0" />
             <button
               onClick={() => setSelectedCategory(null)}
               className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all duration-200 ${
@@ -231,7 +231,7 @@ export default function WordlistManager() {
             onDrop={(e) => { e.preventDefault(); handleUpload(e.dataTransfer.files[0]) }}
           >
             <div className="w-14 h-14 rounded-2xl bg-white/[0.03] border border-white/[0.06] flex items-center justify-center mx-auto mb-4 group-hover:border-cyan-400/20 transition-colors">
-              <Upload size={22} className="text-white/15 group-hover:text-cyan-400/40 transition-colors" />
+              <UploadSimple size={22} className="text-white/15 group-hover:text-cyan-400/40 transition-colors" />
             </div>
             <p className="text-sm text-white/30 font-medium">{t('wl.dragHere', language)}</p>
             <p className="text-[11px] text-white/15 mt-1.5">{t('wl.supportedFormats', language)}</p>
@@ -244,7 +244,7 @@ export default function WordlistManager() {
             className="flex items-center gap-3 p-4 rounded-2xl border border-amber-400/15 bg-amber-400/[0.03] hover:border-amber-400/30 hover:bg-amber-400/[0.06] transition-all duration-300 group"
           >
             <div className="w-10 h-10 rounded-xl bg-amber-400/10 border border-amber-400/15 flex items-center justify-center shrink-0 group-hover:border-amber-400/30 transition-colors">
-              <Download size={18} className="text-amber-400/60 group-hover:text-amber-400 transition-colors" />
+              <DownloadSimple size={18} className="text-amber-400/60 group-hover:text-amber-400 transition-colors" />
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold text-amber-300/90 group-hover:text-amber-300 transition-colors">
@@ -252,7 +252,7 @@ export default function WordlistManager() {
               </p>
               <p className="text-[11px] text-white/25 mt-0.5">{t('wl.crackstationDesc', language)}</p>
             </div>
-            <ExternalLink size={14} className="text-white/15 group-hover:text-amber-400/60 transition-colors shrink-0" />
+            <ArrowSquareOut size={14} className="text-white/15 group-hover:text-amber-400/60 transition-colors shrink-0" />
           </a>
         </>
       )}
@@ -289,7 +289,7 @@ export default function WordlistManager() {
                   }`}
                 >
                   {selectedWordlistId === wl.id && (
-                    <CheckCircle2 size={12} className="text-surface-900" />
+                    <CheckCircle size={12} className="text-surface-900" />
                   )}
                 </div>
                 <div className="flex-1 min-w-0">
